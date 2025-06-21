@@ -28,7 +28,7 @@
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
-    "target": "ES6",
+    "target": "es2020",
     "types": ["node", "jest"]
   }
 }
