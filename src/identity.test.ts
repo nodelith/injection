@@ -34,7 +34,7 @@ describe('identity', () => {
   })
 
   describe('decode', () => {
-    it('returns a UUID string (8-4-4-4-12)', () => {
+    it('returns a UUID string', () => {
       const uuid = '123e4567-e89b-12d3-a456-426614174000'
       const encoded = encodeIdentity(uuid)
       const decoded = decodeIdentity(encoded)
@@ -69,21 +69,21 @@ describe('identity', () => {
     })
 
     it('produces different values each call', () => {
-      const a = createIdentity()
-      const b = createIdentity()
-      expect(a).not.toBe(b)
+      const identity_0 = createIdentity()
+      const identity_1 = createIdentity()
+      expect(identity_0).not.toBe(identity_1)
     })
   })
 
   describe('extract', () => {
     it('attaches a hidden base62 identity to an object as a symbol', () => {
-      const obj: Record<PropertyKey, any> = {}
-      extractIdentity(obj)
+      const object: Record<PropertyKey, any> = {}
+      extractIdentity(object)
 
-      const symbols = Object.getOwnPropertySymbols(obj)
+      const symbols = Object.getOwnPropertySymbols(object)
       expect(symbols.length).toBeGreaterThan(0)
 
-      const symbolValue = obj[symbols[0]!]
+      const symbolValue = object[symbols[0]!]
       expect(typeof symbolValue).toBe('string')
       expect(symbolValue).toHaveLength(22)
 
@@ -94,23 +94,70 @@ describe('identity', () => {
     })
 
     it('does not add enumerable keys', () => {
-      const obj: Record<PropertyKey, any> = {}
-      extractIdentity(obj)
-      expect(Object.keys(obj)).toHaveLength(0)
+      const object: Record<PropertyKey, any> = {}
+      extractIdentity(object)
+      expect(Object.keys(object)).toHaveLength(0)
     })
 
     it('returns same identity on multiple calls', () => {
-      const obj: Record<PropertyKey, any> = {}
-      extractIdentity(obj)
-      const sym1 = Object.getOwnPropertySymbols(obj)[0]
-      const id1 = obj[sym1!]
+      const object: Record<PropertyKey, any> = {}
+      extractIdentity(object)
+      const symbol_0 = Object.getOwnPropertySymbols(object)[0]
+      const identity_0 = object[symbol_0!]
 
-      extractIdentity(obj)
-      const sym2 = Object.getOwnPropertySymbols(obj)[0]
-      const id2 = obj[sym2!]
+      extractIdentity(object)
+      const symbol_1 = Object.getOwnPropertySymbols(object)[0]
+      const id2 = object[symbol_1!]
 
-      expect(sym1).toBe(sym2)
-      expect(id1).toBe(id2)
+      expect(symbol_0).toBe(symbol_1)
+      expect(identity_0).toBe(id2)
+    })
+
+    it('works on plain objects', () => {
+      const object: Record<PropertyKey, any> = {}
+      extractIdentity(object)
+      const symbol = Object.getOwnPropertySymbols(object)[0]
+      expect(typeof object[symbol!]).toBe('string')
+      expect(object[symbol!].length).toBe(22)
+    })
+  
+    it('works on class instances', () => {
+      class SomeClass {}
+      const user = new SomeClass()
+      extractIdentity(user)
+      const symbol = Object.getOwnPropertySymbols(user)[0]
+      expect(typeof user[symbol!]).toBe('string')
+    })
+  
+    it('works on functions', () => {
+      const someFunction = function () {}
+      extractIdentity(someFunction)
+      const symbol = Object.getOwnPropertySymbols(someFunction)[0]
+      expect(typeof someFunction[symbol!]).toBe('string')
+    })
+  
+    it('works on arrays', () => {
+      const array: any[] = []
+      extractIdentity(array)
+      const sym = Object.getOwnPropertySymbols(array)[0]
+      expect(typeof array[sym!]).toBe('string')
+    })
+  
+    it('works on Object.create(null)', () => {
+      const object = Object.create(null)
+      extractIdentity(object)
+      const symbol = Object.getOwnPropertySymbols(object)[0]
+      expect(typeof object[symbol!]).toBe('string')
+    })
+  
+    it('throws on frozen objects', () => {
+      const frozenObject = Object.freeze({})
+      expect(() => extractIdentity(frozenObject)).toThrow()
+    })
+  
+    it('throws on non-extensible objects', () => {
+      const sealedObject = Object.preventExtensions({})
+      expect(() => extractIdentity(sealedObject)).toThrow()
     })
   })
 
