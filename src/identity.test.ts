@@ -76,88 +76,74 @@ describe('identity', () => {
   })
 
   describe('extract', () => {
-    it('attaches a hidden base62 identity to an object as a symbol', () => {
-      const object: Record<PropertyKey, any> = {}
-      extractIdentity(object)
+    it('returns a base62 identity string of length 22', () => {
+      const object = {}
+      const identity = extractIdentity(object)
+      expect(typeof identity).toBe('string')
+      expect(identity.length).toBe(22)
+    })
 
-      const symbols = Object.getOwnPropertySymbols(object)
-      expect(symbols.length).toBeGreaterThan(0)
+    it('returns the same identity on multiple calls', () => {
+      const object = {}
+      const first = extractIdentity(object)
+      const second = extractIdentity(object)
+      expect(first).toBe(second)
+    })
 
-      const symbolValue = object[symbols[0]!]
-      expect(typeof symbolValue).toBe('string')
-      expect(symbolValue).toHaveLength(22)
-
-      const decoded = decodeIdentity(symbolValue)
-      expect(decoded).toMatch(
+    it('returns a decodable UUID', () => {
+      const object = {}
+      const identity = extractIdentity(object)
+      const uuid = decodeIdentity(identity)
+      expect(uuid).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
       )
     })
 
     it('does not add enumerable keys', () => {
-      const object: Record<PropertyKey, any> = {}
+      const object = {}
       extractIdentity(object)
       expect(Object.keys(object)).toHaveLength(0)
     })
 
-    it('returns same identity on multiple calls', () => {
-      const object: Record<PropertyKey, any> = {}
-      extractIdentity(object)
-      const symbol_0 = Object.getOwnPropertySymbols(object)[0]
-      const identity_0 = object[symbol_0!]
-
-      extractIdentity(object)
-      const symbol_1 = Object.getOwnPropertySymbols(object)[0]
-      const id2 = object[symbol_1!]
-
-      expect(symbol_0).toBe(symbol_1)
-      expect(identity_0).toBe(id2)
-    })
-
     it('works on plain objects', () => {
-      const object: Record<PropertyKey, any> = {}
-      extractIdentity(object)
-      const symbol = Object.getOwnPropertySymbols(object)[0]
-      expect(typeof object[symbol!]).toBe('string')
-      expect(object[symbol!].length).toBe(22)
+      const object = {}
+      const identity = extractIdentity(object)
+      expect(typeof identity).toBe('string')
     })
-  
+
     it('works on class instances', () => {
       class SomeClass {}
-      const user = new SomeClass()
-      extractIdentity(user)
-      const symbol = Object.getOwnPropertySymbols(user)[0]
-      expect(typeof user[symbol!]).toBe('string')
+      const instance = new SomeClass()
+      const identity = extractIdentity(instance)
+      expect(typeof identity).toBe('string')
     })
-  
+
     it('works on functions', () => {
-      const someFunction = function () {}
-      extractIdentity(someFunction)
-      const symbol = Object.getOwnPropertySymbols(someFunction)[0]
-      expect(typeof someFunction[symbol!]).toBe('string')
+      const fn = () => {}
+      const identity = extractIdentity(fn)
+      expect(typeof identity).toBe('string')
     })
-  
+
     it('works on arrays', () => {
-      const array: any[] = []
-      extractIdentity(array)
-      const sym = Object.getOwnPropertySymbols(array)[0]
-      expect(typeof array[sym!]).toBe('string')
+      const arr: any[] = []
+      const identity = extractIdentity(arr)
+      expect(typeof identity).toBe('string')
     })
-  
+
     it('works on Object.create(null)', () => {
       const object = Object.create(null)
-      extractIdentity(object)
-      const symbol = Object.getOwnPropertySymbols(object)[0]
-      expect(typeof object[symbol!]).toBe('string')
+      const identity = extractIdentity(object)
+      expect(typeof identity).toBe('string')
     })
-  
+
     it('throws on frozen objects', () => {
-      const frozenObject = Object.freeze({})
-      expect(() => extractIdentity(frozenObject)).toThrow()
+      const frozen = Object.freeze({})
+      expect(() => extractIdentity(frozen)).toThrow()
     })
-  
+
     it('throws on non-extensible objects', () => {
-      const sealedObject = Object.preventExtensions({})
-      expect(() => extractIdentity(sealedObject)).toThrow()
+      const sealed = Object.preventExtensions({})
+      expect(() => extractIdentity(sealed)).toThrow()
     })
   })
 

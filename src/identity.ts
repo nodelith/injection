@@ -85,7 +85,7 @@ export function createIdentity() {
   return encodeIdentity(uuid)
 }
 
-export function extractIdentity(object: Object) {
+export function extractIdentity(object: Object): string {
   if(!(IDENTITY_KEY in object)) {
     Object.defineProperty(object, IDENTITY_KEY, {
       value: createIdentity(),
@@ -93,6 +93,8 @@ export function extractIdentity(object: Object) {
       enumerable: false,
     })
   }
+
+  return object[IDENTITY_KEY]
 }
 
 export namespace Identity {
