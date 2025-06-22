@@ -1,10 +1,10 @@
 import { Token } from 'token'
-import { createBundle, mergeBundles, Bundle } from './bundle'
+import { Bundle, createBundle, mergeBundles } from './bundle'
 
 describe('Bundle', () => {
   describe('createBundle', () => {
     it('creates a bundle from a descriptor object', () => {
-      const propertyDescriptors: PropertyDescriptorMap = {
+      const propertyDescriptors: Bundle.DescriptorMap = {
         foo: { value: 1, enumerable: true },
         bar: { value: 2, enumerable: true },
       }
@@ -16,7 +16,7 @@ describe('Bundle', () => {
     })
 
     it('creates a bundle from an entry list', () => {
-      const propertyDescriptors: [Token, PropertyDescriptor][] = [
+      const propertyDescriptors: Bundle.DescriptorEntry[] = [
         ['foo', { value: 1, enumerable: true }],
         ['bar', { value: 2, enumerable: true }],
       ]
@@ -28,7 +28,7 @@ describe('Bundle', () => {
     })
 
     it('respects first key precedence in entry list', () => {
-      const propertyDescriptors: [Token, PropertyDescriptor][] = [
+      const propertyDescriptors: Bundle.DescriptorEntry[] = [
         ['foo', { value: 1, enumerable: true }],
         ['foo', { value: 999, enumerable: true }],
       ]
@@ -39,7 +39,7 @@ describe('Bundle', () => {
     })
 
     it('skips duplicate keys from object descriptor input', () => {
-      const propertyDescriptors: PropertyDescriptorMap = {
+      const propertyDescriptors: Bundle.DescriptorMap = {
         foo: { value: 1, enumerable: true },
         bar: { value: 2, enumerable: true },
       }
@@ -54,6 +54,7 @@ describe('Bundle', () => {
       const get = jest.fn(() => 123)
     
       const source = {}
+
       Object.defineProperty(source, 'expensive', { get, enumerable: true })
     
       const descriptors = Object.getOwnPropertyDescriptors(source)
@@ -62,6 +63,37 @@ describe('Bundle', () => {
       expect(get).not.toHaveBeenCalled()
       expect(bundle.expensive).toBe(123)
       expect(get).toHaveBeenCalledTimes(1)
+    })
+
+    it('supports function-based BundleDescriptors', () => {
+      const descriptor = jest.fn((bundle) => ({
+        get: () => Object.keys(bundle).length,
+        enumerable: true,
+      }))
+    
+      const bundle = createBundle([
+        ['count', descriptor]
+      ])
+    
+      expect(descriptor).toHaveBeenCalledTimes(1)
+      expect(typeof bundle.count).toBe('number')
+      expect(bundle.count).toBe(1)
+    })
+
+    it('returns an empty frozen bundle from empty descriptor input', () => {
+      const bundle = createBundle([])
+      expect(Object.keys(bundle)).toHaveLength(0)
+      expect(Object.isFrozen(bundle)).toBe(true)
+    })
+
+    it('freezes the returned bundle', () => {
+      const descriptors: Bundle.DescriptorEntry[] = [
+        ['foo', { value: 123, enumerable: true }]
+      ]
+
+      const bundle = createBundle(descriptors)
+    
+      expect(Object.isFrozen(bundle)).toBe(true)
     })
   })
 
