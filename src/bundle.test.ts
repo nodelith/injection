@@ -119,4 +119,16 @@ describe('Bundle', () => {
       expect(get).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('namespace', () => {
+    it('exposes create function', () => {
+      expect(typeof Bundle.create).toBe('function')
+      expect(Bundle.create).toBe(createBundle)
+    })
+
+    it('exposes merge function', () => {
+      expect(typeof Bundle.merge).toBe('function')
+      expect(Bundle.merge).toBe(mergeBundles)
+    })
+  })
 })

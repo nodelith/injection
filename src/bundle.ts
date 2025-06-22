@@ -23,3 +23,8 @@ export function mergeBundles(...bundles: (Bundle | undefined | null)[]): Bundle 
     return Object.entries(Object.getOwnPropertyDescriptors(bundle ?? {}))
   }))
 }
+
+export namespace Bundle {
+  export const merge = mergeBundles
+  export const create = createBundle
+}
