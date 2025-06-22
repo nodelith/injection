@@ -7,7 +7,7 @@ import {
   Identity,
 } from './identity'
 
-describe('identity', () => {
+describe('Identity', () => {
   describe('encode', () => {
     it('returns a string of length 22', () => {
       const uuid = '7e1c22c7-5b5f-4cd3-a678-9e9d0d7613fc'
