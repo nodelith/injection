@@ -52,11 +52,11 @@ export class Registration<R = any> {
       return this.context.resolve(this.target, options?.bundle)
     }
 
-    if (options?.context && lifecycle === 'scoped') {
+    if(lifecycle === 'scoped' && options?.context) {
       return options.context.resolve(this.target, options.bundle)
     }
 
-    if(!options?.context && lifecycle === 'scoped') {
+    if(lifecycle === 'scoped' && !options?.context) {
       throw new Error('Could not resolve scoped registration. Missing resolution context')
     }
 
