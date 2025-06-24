@@ -1,166 +1,231 @@
-import { Token } from 'token'
 import { Bundle, createBundle, mergeBundles } from './bundle'
 
 describe('Bundle', () => {
   describe('createBundle', () => {
-    it('creates a bundle from a descriptor object', () => {
-      const propertyDescriptors: Bundle.DescriptorMap = {
-        foo: { value: 1, enumerable: true },
-        bar: { value: 2, enumerable: true },
-      }
-
-      const bundle = createBundle(propertyDescriptors)
-
+    it('defines properties with value descriptors', () => {
+      const bundle = createBundle(
+        ['foo', { enumerable: true, value: 1 }],
+        ['bar', { enumerable: true, value: 2 }],
+      )
+  
       expect(bundle.foo).toBe(1)
       expect(bundle.bar).toBe(2)
     })
-
-    it('creates a bundle from an entry list', () => {
-      const propertyDescriptors: Bundle.DescriptorEntry[] = [
-        ['foo', { value: 1, enumerable: true }],
-        ['bar', { value: 2, enumerable: true }],
-      ]
-
-      const bundle = createBundle(propertyDescriptors)
-
-      expect(bundle.foo).toBe(1)
-      expect(bundle.bar).toBe(2)
+  
+    it('defines properties with getter descriptors', () => {
+      const bundle = createBundle(
+        ['foo', { enumerable: true, get: () => 42 }],
+      )
+  
+      expect(bundle.foo).toBe(42)
     })
-
-    it('respects first key precedence in entry list', () => {
-      const propertyDescriptors: Bundle.DescriptorEntry[] = [
-        ['foo', { value: 1, enumerable: true }],
-        ['foo', { value: 999, enumerable: true }],
-      ]
-
-      const bundle = createBundle(propertyDescriptors)
-
-      expect(bundle.foo).toBe(1)
+  
+    it('defines properties using resolve functions', () => {
+      const bundle = createBundle(
+        ['foo', { enumerable: true, resolve: () => 100 }],
+      )
+  
+      expect(bundle.foo).toBe(100)
     })
-
-    it('skips duplicate keys from object descriptor input', () => {
-      const propertyDescriptors: Bundle.DescriptorMap = {
-        foo: { value: 1, enumerable: true },
-        bar: { value: 2, enumerable: true },
-      }
-
-      const bundle = createBundle(propertyDescriptors)
-
-      expect(Object.keys(bundle)).toContain('foo')
-      expect(Object.keys(bundle)).toContain('bar')
+  
+    it('passes the bundle to the resolve function', () => {
+      const bundle = createBundle(
+        ['foo', { enumerable: true, value: 2 }],
+        ['bar', { enumerable: true, resolve: (bundle) => bundle.foo + 3 }],
+      )
+  
+      expect(bundle.bar).toBe(5)
     })
-    
-    it('does not trigger getters during createBundle', () => {
-      const get = jest.fn(() => 123)
-    
-      const source = {}
-
-      Object.defineProperty(source, 'expensive', { get, enumerable: true })
-    
-      const descriptors = Object.getOwnPropertyDescriptors(source)
-      const bundle = createBundle(descriptors)
-    
-      expect(get).not.toHaveBeenCalled()
-      expect(bundle.expensive).toBe(123)
-      expect(get).toHaveBeenCalledTimes(1)
+  
+    it('respects key precedence', () => {
+      const bundle = createBundle(
+        ['x', { enumerable: true, value: 1 }],
+        ['x', { enumerable: true, value: 999 }],
+      )
+  
+      expect(bundle.x).toBe(1)
     })
-
-    it('supports function-based BundleDescriptors', () => {
-      const descriptor = jest.fn((bundle) => ({
-        get: () => Object.keys(bundle).length,
-        enumerable: true,
-      }))
-    
-      const bundle = createBundle([
-        ['count', descriptor]
-      ])
-    
-      expect(descriptor).toHaveBeenCalledTimes(1)
-      expect(typeof bundle.count).toBe('number')
-      expect(bundle.count).toBe(1)
+  
+    it('throws if value and resolve are both defined', () => {
+      expect(() => {
+        createBundle(
+          ['foo', { enumerable: true, value: 1, resolve: () => 2 }],
+        )
+      }).toThrow(/Cannot specify both 'value' and 'resolve'/)
     })
-
-    it('returns an empty frozen bundle from empty descriptor input', () => {
-      const bundle = createBundle([])
+  
+    it('throws if get and resolve are both defined', () => {
+      expect(() => {
+        createBundle(
+          ['foo', { enumerable: true, resolve: () => 2, get: () => 1 }],
+        )
+      }).toThrow(/Cannot specify both 'get' and 'resolve'/)
+    })
+  
+    it('does not invoke resolve until accessed', () => {
+      const resolve = jest.fn(() => 123)
+  
+      const bundle = createBundle(
+        ['foo', { enumerable: true, resolve }],
+      )
+  
+      expect(resolve).not.toHaveBeenCalled()
+      expect(bundle.foo).toBe(123)
+      expect(resolve).toHaveBeenCalledTimes(1)
+    })
+  
+    it('returns a frozen object', () => {
+      const bundle = createBundle(
+        ['foo', { enumerable: true, value: 1 }],
+      )
+  
+      expect(Object.isFrozen(bundle)).toBe(true)
+    })
+  
+    it('returns an empty frozen bundle if no entries are given', () => {
+      const bundle = createBundle()
       expect(Object.keys(bundle)).toHaveLength(0)
       expect(Object.isFrozen(bundle)).toBe(true)
     })
 
-    it('freezes the returned bundle', () => {
-      const descriptors: Bundle.DescriptorEntry[] = [
-        ['foo', { value: 123, enumerable: true }]
-      ]
-
-      const bundle = createBundle(descriptors)
+    it('accepts BundleDescriptorMap as input', () => {
+      const bundle = createBundle({
+        foo: { enumerable: true, value: 1 },
+        bar: { enumerable: true, value: 2 },
+      })
     
-      expect(Object.isFrozen(bundle)).toBe(true)
+      expect(bundle.foo).toBe(1)
+      expect(bundle.bar).toBe(2)
+    })
+
+    it('supports mixed BundleDescriptorEntry and BundleDescriptorMap', () => {
+      const bundle = createBundle(
+        ['baz', { enumerable: true, value: 3 }],
+        {
+          foo: { enumerable: true, value: 1 },
+          bar: { enumerable: true, value: 2 },
+        }
+      )
+    
+      expect(bundle.foo).toBe(1)
+      expect(bundle.bar).toBe(2)
+      expect(bundle.baz).toBe(3)
+    })
+
+    it('ignores undefined descriptors', () => {
+      const bundle = createBundle(
+        undefined,
+        ['foo', { enumerable: true, value: 42 }],
+        null as any // simulate bad input
+      )
+    
+      expect(bundle.foo).toBe(42)
+    })
+    
+    it('preserves enumerability during merge', () => {
+      const bundle1 = createBundle({
+        a: { value: 1, enumerable: false },
+        b: { value: 2, enumerable: true },
+      })
+    
+      const merged = mergeBundles(bundle1)
+    
+      expect(Object.keys(merged)).toContain('b')
+      expect(Object.keys(merged)).not.toContain('a')
+    })
+
+    it('prevents mutation of bundle properties after creation', () => {
+      const bundle = createBundle(['foo', { enumerable: true, value: 10 }])
+    
+      expect(() => {
+        (bundle as any).foo = 999
+      }).toThrow()
     })
   })
 
   describe('mergeBundles', () => {
     it('merges multiple bundles with first key precedence', () => {
-      const bundleA: Bundle = { foo: 1 }
-      const bundleB: Bundle = { foo: 2, bar: 3 }
-      const bundleC: Bundle = { baz: 4, bar: 5 }
+      const bundle_0 = createBundle(
+        ['foo', { enumerable: true, value: 1 }],
+      )
 
-      const bundle = mergeBundles(bundleA, bundleB, bundleC)
+      const bundle_1 = createBundle(
+        ['bar', { enumerable: true, value: 2 }],
+        ['foo', { enumerable: true, value: 999 }],
+      )
 
-      expect(bundle.foo).toBe(1)
-      expect(bundle.bar).toBe(3)
-      expect(bundle.baz).toBe(4)
+      const bundle_2 = createBundle(
+        ['baz', { enumerable: true, value: 3 }],
+        ['bar', { enumerable: true, value: 888 }],
+      )
+  
+      const merged = mergeBundles(
+        bundle_0,
+        bundle_1,
+        bundle_2,
+      )
+  
+      expect(merged.foo).toBe(1)
+      expect(merged.bar).toBe(2)
+      expect(merged.baz).toBe(3)
     })
+  
+    it('skips undefined and null bundles', () => {
+      const bundle_0 = createBundle(
+        ['foo', { enumerable: true, value: 1 }],
+      )
 
-    it('ignores undefined and null bundles', () => {
-      const bundleA: Bundle = { foo: 1 }
-      const bundleB: Bundle = { bar: 2 }
-
-      const merged = mergeBundles(bundleA, null, undefined, bundleB)
-
+      const bundle_1 = createBundle(
+        ['bar', { enumerable: true, value: 2 }],
+      )
+  
+      const merged = mergeBundles(
+        null, undefined, bundle_0, 
+        null, undefined, bundle_1,
+        null, undefined,
+      )
+  
       expect(merged.foo).toBe(1)
       expect(merged.bar).toBe(2)
     })
-
-    it('returns an empty bundle if given no arguments', () => {
+  
+    it('returns empty bundle when given no bundles', () => {
       const merged = mergeBundles()
       expect(Object.keys(merged)).toHaveLength(0)
+      expect(Object.isFrozen(merged)).toBe(true)
     })
-
-    it('preserves property descriptor behavior (non-enumerable)', () => {
-      const propertyDescriptors: [Token, PropertyDescriptor][] = [
-        ['hidden', { value: 42, enumerable: false }],
-      ]
-
-      const bundle = createBundle(propertyDescriptors)
+  
+    it('preserves non-enumerable properties', () => {
+      const bundle = createBundle(
+        ['secret', { enumerable: false, value: 42 }],
+      )
 
       const merged = mergeBundles(bundle)
+  
+      expect(merged.secret).toBe(42)
 
-      expect(merged.hidden).toBe(42)
-      expect(Object.keys(merged)).not.toContain('hidden')
+      expect(Object.keys(merged)).not.toContain('secret')
     })
-    
-    it('does not trigger getters during mergeBundles', () => {
-      const get = jest.fn(() => 123)
-    
-      const bundleWithGetter = {}
-      Object.defineProperty(bundleWithGetter, 'expensive', { get, enumerable: true })
-    
-      const merged = mergeBundles(bundleWithGetter)
-    
+  
+    it('does not invoke getter during merge', () => {
+      const get = jest.fn(() => 456)
+  
+      const object = {}
+
+      Object.defineProperty(object, 'expensive', { enumerable: true, get })
+  
+      const merged = mergeBundles(object)
+  
       expect(get).not.toHaveBeenCalled()
-      expect(merged.expensive).toBe(123)
+      expect(merged.expensive).toBe(456)
       expect(get).toHaveBeenCalledTimes(1)
     })
   })
-
+  
   describe('namespace', () => {
-    it('exposes create function', () => {
-      expect(typeof Bundle.create).toBe('function')
+    it('exposes create and merge functions', () => {
       expect(Bundle.create).toBe(createBundle)
-    })
-
-    it('exposes merge function', () => {
-      expect(typeof Bundle.merge).toBe('function')
       expect(Bundle.merge).toBe(mergeBundles)
     })
-  })
+  })  
 })
