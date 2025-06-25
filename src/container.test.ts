@@ -12,6 +12,21 @@ describe('Container (integration)', () => {
 
   const sum = (a: Token, b: Token) => (bundle: Record<Token, any>) => bundle[a] + bundle[b]
 
+  it('returns the registration for a known token', () => {
+    const container = Container.create()
+    const token = 'known'
+
+    container.register(token, Registration.create(() => {}))
+    expect(container.get(token)).toBeInstanceOf(Registration)
+  })
+
+  it('returns undefined for an unknown token', () => {
+    const container = Container.create()
+    const token = 'unknown'
+
+    expect(container.get(token)).toBeUndefined()
+  })
+
   it('registers and resolves a singleton value', () => {
     const container = Container.create()
     container.register(token_a, Registration.create(value(123)))

@@ -29,8 +29,12 @@ export class Container<R extends Registration = Registration> {
     return [...this._registrations.entries()]
   }
 
+  public get(token: Token): undefined | R {
+    return this._registrations.get(token)
+  }
+
   public has(token: Token): boolean {
-    return !!this._registrations.has(token)
+    return this._registrations.has(token)
   }
 
   protected constructor(options?: ContainerDeclarationOptions) {

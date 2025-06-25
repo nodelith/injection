@@ -53,7 +53,7 @@ export class Registration<R = any> {
     }
 
     if(lifecycle === 'scoped' && options?.context) {
-      return options.context.resolve(this.resolver, options.bundle)
+      return options.context.resolve(this.resolver, options?.bundle)
     }
 
     if(lifecycle === 'scoped' && !options?.context) {
