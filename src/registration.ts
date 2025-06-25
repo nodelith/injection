@@ -18,13 +18,13 @@ export class Registration<R = any> {
     return new Registration<R>(resolver, options)
   }
 
-  private readonly resolver: Resolver<R>
+  protected readonly resolver: Resolver<R>
 
-  private readonly bundle: Bundle
+  protected readonly bundle: Bundle
 
-  private readonly context: Context
+  protected readonly context: Context
 
-  private readonly lifecycle: RegistrationLifecycle
+  public readonly lifecycle: RegistrationLifecycle
 
   protected constructor(resolver: Resolver<R>, options?: RegistrationOptions) {
     this.resolver = resolver
@@ -35,9 +35,9 @@ export class Registration<R = any> {
 
   public clone(options?: RegistrationOptions): Registration<R> {
     return new Registration(this.resolver, {
+      lifecycle: this.lifecycle,
       bundle: options?.bundle ?? this.bundle,
       context: options?.context ?? this.context, 
-      lifecycle: this.lifecycle,
     })
   }
   
