@@ -1,10 +1,10 @@
 import { Bundle } from './bundle'
-import { Target } from './target'
 import { Context } from  './context'
+import { Resolver } from './resolver'
 
 type RegistrationLifecycle =
   | 'scoped' // Return an instance from the scope context if one exist
-  | 'transient' // Will always return a new instance of the registration target
+  | 'transient' // Will always return a new instance of the registration
   | 'singleton' // Will return an instance from the root context if one exist
 
 export type RegistrationOptions = {
@@ -14,11 +14,11 @@ export type RegistrationOptions = {
 }
 
 export class Registration<R = any> {
-  public static create<R>(target: Target<R>, options?: RegistrationOptions) {
-    return new Registration<R>(target, options)
+  public static create<R>(resolver: Resolver<R>, options?: RegistrationOptions) {
+    return new Registration<R>(resolver, options)
   }
 
-  private readonly target: Target<R>
+  private readonly resolver: Resolver<R>
 
   private readonly bundle: Bundle
 
@@ -26,15 +26,15 @@ export class Registration<R = any> {
 
   private readonly lifecycle: RegistrationLifecycle
 
-  protected constructor(target: Target<R>, options?: RegistrationOptions) {
-    this.target = target
+  protected constructor(resolver: Resolver<R>, options?: RegistrationOptions) {
+    this.resolver = resolver
     this.bundle = options?.bundle ?? {}
     this.context = options?.context ?? new Context()
     this.lifecycle = options?.lifecycle ?? 'singleton'
   }
 
   public clone(options?: RegistrationOptions): Registration<R> {
-    return new Registration(this.target, {
+    return new Registration(this.resolver, {
       bundle: options?.bundle ?? this.bundle,
       context: options?.context ?? this.context, 
       lifecycle: this.lifecycle,
@@ -45,15 +45,15 @@ export class Registration<R = any> {
     const lifecycle = options?.lifecycle ?? this.lifecycle
 
     if(lifecycle === 'transient') {
-      return this.target(options?.bundle ?? {}) 
+      return this.resolver(options?.bundle ?? {}) 
     }
 
     if(lifecycle === 'singleton') {
-      return this.context.resolve(this.target, options?.bundle)
+      return this.context.resolve(this.resolver, options?.bundle)
     }
 
     if(lifecycle === 'scoped' && options?.context) {
-      return options.context.resolve(this.target, options.bundle)
+      return options.context.resolve(this.resolver, options.bundle)
     }
 
     if(lifecycle === 'scoped' && !options?.context) {

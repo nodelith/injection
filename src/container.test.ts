@@ -20,7 +20,7 @@ describe('Container (integration)', () => {
     expect(result).toBe(123)
   })
 
-  it('registers and resolves a dependent target via bundle injection', () => {
+  it('registers and resolves a dependent resolver via bundle injection', () => {
     const container = Container.create()
     container.register(token_a, Registration.create(value(2)))
     container.register(token_b, Registration.create(value(3)))
@@ -121,7 +121,7 @@ describe('Container (integration)', () => {
   })
 
   it('uses resolution context when resolving scoped lifecycle', () => {
-    const targetMock = jest.fn(() => ({ value: 'scoped-value' }))
+    const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
 
     const rootContext = new Context()
 
@@ -133,30 +133,30 @@ describe('Container (integration)', () => {
 
     const container = Container.create({ context: rootContext })
   
-    container.register(token_a, Registration.create(targetMock, {
+    container.register(token_a, Registration.create(resolverMock, {
       lifecycle: 'scoped'
     }))
 
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(0)
+    expect(resolverMock).toHaveBeenCalledTimes(0)
   
     const result_0 = container.resolve(token_a, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(1)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(1)
+    expect(resolverMock).toHaveBeenCalledTimes(1)
 
     const result_1 = container.resolve(token_a, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(2)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(1)
+    expect(resolverMock).toHaveBeenCalledTimes(1)
   
     expect(result_0).toEqual({ value: 'scoped-value' })
     expect(result_0).toBe(result_1)
   })
 
   it('uses root context when resolving singleton lifecycle', () => {
-    const targetMock = jest.fn(() => ({ value: 'singleton-value' }))
+    const resolverMock = jest.fn(() => ({ value: 'singleton-value' }))
 
     const rootContext = new Context()
 
@@ -168,30 +168,30 @@ describe('Container (integration)', () => {
 
     const container = Container.create({ context: rootContext })
   
-    container.register(token_a, Registration.create(targetMock, {
+    container.register(token_a, Registration.create(resolverMock, {
       lifecycle: 'singleton'
     }))
 
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(0)
+    expect(resolverMock).toHaveBeenCalledTimes(0)
   
     const result_0 = container.resolve(token_a, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(1)
-    expect(targetMock).toHaveBeenCalledTimes(1)
+    expect(resolverMock).toHaveBeenCalledTimes(1)
 
     const result_1 = container.resolve(token_a, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(2)
-    expect(targetMock).toHaveBeenCalledTimes(1)
+    expect(resolverMock).toHaveBeenCalledTimes(1)
   
     expect(result_0).toEqual({ value: 'singleton-value' })
     expect(result_0).toBe(result_1)
   })
 
   it('ignores contexts when resolving transient lifecycle', () => {
-    const targetMock = jest.fn(() => ({ value: 'transient-value' }))
+    const resolverMock = jest.fn(() => ({ value: 'transient-value' }))
 
     const rootContext = new Context()
 
@@ -203,23 +203,23 @@ describe('Container (integration)', () => {
 
     const container = Container.create({ context: rootContext })
   
-    container.register(token_a, Registration.create(targetMock, {
+    container.register(token_a, Registration.create(resolverMock, {
       lifecycle: 'transient'
     }))
 
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(0)
+    expect(resolverMock).toHaveBeenCalledTimes(0)
   
     const result_0 = container.resolve(token_a, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(1)
+    expect(resolverMock).toHaveBeenCalledTimes(1)
 
     const result_1 = container.resolve(token_a, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(targetMock).toHaveBeenCalledTimes(2)
+    expect(resolverMock).toHaveBeenCalledTimes(2)
   
     expect(result_0).toEqual({ value: 'transient-value' })
     expect(result_0).not.toBe(result_1)

@@ -1,27 +1,29 @@
+import { Bundle } from 'bundle'
 import { Context } from './context'
 
 describe('Context', () => {
   describe('resolve()', () => {
-    it('calls the target function and returns its result', () => {
+    it('calls the resolver function and returns its result', () => {
       const context = new Context()
-      const someFunction = (a: number, b: number) => a + b
+      const someFunction = (bundle: Bundle) => `${bundle.x}-${bundle.y}`
 
-      const result = context.resolve(someFunction, 2, 3)
-      expect(result).toBe(5)
+      const bundle = { x: 'prefix', y: 'suffix' }
+      const result = context.resolve(someFunction, bundle)
+      expect(result).toBe('prefix-suffix')
     })
 
-    it('returns the same result on repeated calls to the same target', () => {
+    it('returns the same result on repeated calls to the same resolver', () => {
       const context = new Context()
-      const someFunction = jest.fn((x: number) => ({ value: x }))
+      const someFunction = jest.fn((bundle: Bundle) => ({ value: bundle.x }))
 
-      const result1 = context.resolve(someFunction, 1)
-      const result2 = context.resolve(someFunction, 999) // should be ignored
+      const result1 = context.resolve(someFunction, { value: 1 })
+      const result2 = context.resolve(someFunction, { value: 2 })
 
       expect(result1).toBe(result2)
       expect(someFunction).toHaveBeenCalledTimes(1)
     })
 
-    it('calls different targets independently', () => {
+    it('calls different resolvers independently', () => {
       const context = new Context()
       const someFunction_0 = jest.fn(() => '0')
       const someFunction_1 = jest.fn(() => '1')
@@ -37,11 +39,12 @@ describe('Context', () => {
 
     it('passes dependencies to the function', () => {
       const context = new Context()
-      const someFunction = jest.fn((x: string, y: number) => `${x}-${y}`)
+      const someFunction = jest.fn((bundle: Bundle) => `${bundle.x}-${bundle.y}`)
 
-      const result = context.resolve(someFunction, 'item', 42)
-      expect(someFunction).toHaveBeenCalledWith('item', 42)
-      expect(result).toBe('item-42')
+      const bundle = { x: 'prefix', y: 'suffix' }
+      const result = context.resolve(someFunction, bundle)
+      expect(someFunction).toHaveBeenCalledWith(bundle)
+      expect(result).toBe('prefix-suffix')
     })
 
     it('ensures resolve uses a stable identity for each function', () => {

@@ -1,5 +1,6 @@
+import { Bundle } from './bundle'
 import { Identity } from './identity'
-import { Target } from './target'
+import { Resolver } from './resolver'
 
 export class Context {
   private instances: Map<Identity, any> = new Map()
@@ -8,14 +9,14 @@ export class Context {
     this.instances.clear()
   }
  
-  public resolve<R, D extends readonly unknown[] = []>(target: Target<R, D>, ...dependencies: D): R {
-    const identity = Identity.extract(target)
+  public resolve<R>(resolver: Resolver<R>, bundle: Bundle = {}): R {
+    const identity = Identity.extract(resolver)
 
     if (this.instances.has(identity)) {
       return this.instances.get(identity)
     }
 
-    const result = target(...dependencies)
+    const result = resolver(bundle)
 
     this.instances.set(identity, result)
 
