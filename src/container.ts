@@ -29,11 +29,15 @@ export class Container<R extends Registration = Registration> {
     return Object.entries(this._registrations)
   }
 
+  public has(token: Token): boolean {
+    return !!this._registrations[token]
+  }
+
   protected constructor(options?: ContainerDeclarationOptions) {
     this.rootContext = options?.context ?? new Context()
   }
 
-  public resolve<R>(token: Token, options?: ContainerResolutionOptions): R | undefined {
+  public resolve<R>(token: Token, options?: ContainerResolutionOptions): R {
     const resolutionEntries = this.entries.map(([token, registration]): BundleDescriptorEntry => {
       return [token, { resolve(bundle: Bundle) {
         return registration.resolve({ bundle, 

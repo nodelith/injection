@@ -244,4 +244,28 @@ describe('Container (integration)', () => {
     expect(cloned).not.toBe(container)
     expect(cloned.resolve(token_a)).toBe('x')
   })
+
+  it('returns false for unknown tokens', () => {
+    const container = Container.create()
+    expect(container.has(token_a)).toBe(false)
+  })
+
+  it('returns true for registered tokens', () => {
+    const container = Container.create()
+    container.register(token_a, Registration.create(() => ({})))
+    expect(container.has(token_a)).toBe(true)
+  })
+
+  it('returns false after cloning if token was not registered', () => {
+    const container = Container.create()
+    const clone = container.clone()
+    expect(clone.has(token_a)).toBe(false)
+  })
+
+  it('returns true in cloned container for copied registrations', () => {
+    const container = Container.create()
+    container.register(token_a, Registration.create(() => ({})))
+    const clone = container.clone()
+    expect(clone.has(token_a)).toBe(true)
+  })
 })
