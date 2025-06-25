@@ -2,7 +2,7 @@ import { Bundle } from 'bundle'
 import { Context } from './context'
 
 describe('Context', () => {
-  describe('resolve()', () => {
+  describe('resolve', () => {
     it('calls the resolver function and returns its result', () => {
       const context = new Context()
       const someFunction = (bundle: Bundle) => `${bundle.x}-${bundle.y}`
@@ -66,7 +66,7 @@ describe('Context', () => {
     })
   })
 
-  describe('clear()', () => {
+  describe('clear', () => {
     it('evicts cached result and re-resolves', () => {
       const context = new Context()
       const someFunction = jest.fn(() => Math.random())

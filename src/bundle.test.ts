@@ -223,9 +223,11 @@ describe('Bundle', () => {
   })
   
   describe('namespace', () => {
-    it('exposes create and merge functions', () => {
+    it('exposes create function', () => {
       expect(Bundle.create).toBe(createBundle)
+    })
+    it('exposes merge function', () => {
       expect(Bundle.merge).toBe(mergeBundles)
     })
-  })  
+  })
 })
