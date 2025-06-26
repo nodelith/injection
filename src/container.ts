@@ -43,10 +43,12 @@ export class Container<R extends Registration = Registration> {
   }
 
   public resolve<R>(token: Token, options?: ContainerResolutionOptions): R {
+    const resolutionContext = options?.context ?? new Context()
+
     const resolutionEntries = this.entries.map(([token, registration]): BundleDescriptorEntry => {
       return [token, { resolve(bundle: Bundle) {
         return registration.resolve({ bundle, 
-          context: options?.context 
+          context: resolutionContext
         })
       }}]
     })
@@ -56,6 +58,7 @@ export class Container<R extends Registration = Registration> {
     )
 
     return this._registrations.get(token)?.resolve({ ...options,
+      context: resolutionContext,
       bundle: Bundle.merge(
         resolutionBundle,
         options?.bundle,

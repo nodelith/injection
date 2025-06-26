@@ -79,16 +79,6 @@ describe('Container (integration)', () => {
     expect(resolution_0).not.toBe(resolution_1)
   })
 
-  it('throws if resolving scoped registration without context', () => {
-    const container = Container.create()
-
-    container.register(token_a, Registration.create(() => 1, {
-      lifecycle: 'scoped'
-    }))
-
-    expect(() => container.resolve(token_a)).toThrow(/Missing resolution context/)
-  })
-
   it('injects internal registrations', () => {
     const container = Container.create()
 
@@ -135,7 +125,7 @@ describe('Container (integration)', () => {
     expect(result).toBe('prefix-suffix')
   })
 
-  it('uses resolution context when resolving scoped lifecycle', () => {
+  it('uses passed resolution context when resolving scoped lifecycle', () => {
     const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
 
     const rootContext = new Context()
@@ -168,6 +158,34 @@ describe('Container (integration)', () => {
   
     expect(result_0).toEqual({ value: 'scoped-value' })
     expect(result_0).toBe(result_1)
+  })
+
+  it('uses new resolution context when resolving scoped lifecycle', () => {
+    const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
+
+    const rootContext = new Context()
+
+    const rootContextSpy = jest.spyOn(rootContext, 'resolve')
+    const container = Container.create({ context: rootContext })
+  
+    container.register(token_a, Registration.create(resolverMock, {
+      lifecycle: 'scoped'
+    }))
+
+    expect(rootContextSpy).toHaveBeenCalledTimes(0)
+    expect(resolverMock).toHaveBeenCalledTimes(0)
+  
+    const result_0 = container.resolve(token_a)
+    expect(rootContextSpy).toHaveBeenCalledTimes(0)
+    expect(resolverMock).toHaveBeenCalledTimes(1)
+
+    const result_1 = container.resolve(token_a)
+    expect(rootContextSpy).toHaveBeenCalledTimes(0)
+    expect(resolverMock).toHaveBeenCalledTimes(2)
+  
+    expect(result_0).toEqual({ value: 'scoped-value' })
+    expect(result_0).not.toBe(result_1)
+    expect(result_0).toEqual(result_1)
   })
 
   it('uses root context when resolving singleton lifecycle', () => {
