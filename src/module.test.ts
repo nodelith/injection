@@ -1,3 +1,4 @@
+import { Bundle } from 'bundle'
 import { Module } from './module'
 
 describe('Module', () => {
@@ -201,26 +202,40 @@ describe('Module', () => {
       expect(clone).not.toBe(module)
     })
 
-    it('copies registrations to the clone', () => {
+    it('copies public and private registrations to the clone', () => {
       const module = new Module()
       const tokenPublic = 'publicToken'
       const tokenPrivate = 'privateToken'
-      module.register(tokenPublic, {
-        constructor: Constructor,
-        lifecycle: 'transient',
-        visibility: 'public',
-      })
+
+      class PrivateDependency {
+        public value = 123
+      }
+
+      class PublicDependency {
+        public dependency: PrivateDependency
+        public constructor(dependencies: Bundle) {
+          this.dependency = dependencies[tokenPrivate]
+        }
+      }
+
       module.register(tokenPrivate, {
-        constructor: Constructor,
+        constructor: PrivateDependency,
         lifecycle: 'transient',
         visibility: 'private',
       })
+
+      module.register(tokenPublic, {
+        constructor: PublicDependency,
+        lifecycle: 'transient',
+        visibility: 'public',
+      })
+
       const clone = module.clone()
-    
-      expect(clone.registrations.length).toBe(1)
-      expect(clone.exposes(tokenPublic)).toBe(true)
-      expect(clone.exposes(tokenPrivate)).toBe(false)
-      expect(() => clone.resolve(tokenPublic)).not.toThrow()
+      const resolved = clone.resolve<PublicDependency>(tokenPublic)
+
+      expect(resolved).toBeInstanceOf(PublicDependency)
+      expect(resolved.dependency).toBeInstanceOf(PrivateDependency)
+      expect(resolved.dependency.value).toBe(123)
     })
 
     it('mutations to the clone do not affect the original module', () => {
