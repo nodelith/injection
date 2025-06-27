@@ -56,6 +56,12 @@ export class Module {
     return !!(this._container.get(token)?.visibility === 'public')
   }
 
+  public clone(): Module {
+    const module = new Module()
+    module.setRegistrations(...this._container.entries)
+    return module
+  }
+
   public register<R extends object>(token: Token, options: (
     ModuleRegistrationOptions & { factory: TargetFactory<R> }
   )): void 
@@ -72,14 +78,18 @@ export class Module {
     this.setResolver(token, resolver, options)
   }
 
-  public registerFactory(token: Token, factory: TargetFactory, options: ModuleRegistrationOptions): void {
+  public registerFactory(token: Token, factory: TargetFactory, options?: ModuleRegistrationOptions): void {
     const resolver = Resolver.create({ factory })
     this.setResolver(token, resolver, options)
   }
 
-  public registerConstructor(token: Token, constructor: TargetConstructor, options: ModuleRegistrationOptions): void {
+  public registerConstructor(token: Token, constructor: TargetConstructor, options?: ModuleRegistrationOptions): void {
     const resolver = Resolver.create({ constructor })
     this.setResolver(token, resolver, options)
+  }
+
+  protected setResolvers<R extends object>(...entries: [token: Token, resolver: Resolver<R>, options?: ModuleRegistrationOptions][]): void {
+    entries.forEach(entry => this.setResolver(...entry))
   }
 
   protected setResolver<R extends object>(token: Token, resolver: Resolver<R>, options?: ModuleRegistrationOptions): void {
@@ -87,6 +97,10 @@ export class Module {
     this.setRegistration(token, registration)
   }
 
+  protected setRegistrations<R extends object>(...entries: [token: Token, registration: ModuleRegistration<R>][]): void {
+    entries.forEach(entry => this.setRegistration(...entry))
+  }
+  
   protected setRegistration<R extends object>(token: Token, registration: ModuleRegistration<R>): void {
     if (this._container.has(token)) {
       throw new Error(`Could not register token "${token.toString()}". Module already contains a registration assigned to the same token.`)

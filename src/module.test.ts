@@ -192,4 +192,56 @@ describe('Module', () => {
       expect(visible).toHaveLength(1)
     })
   })
+
+  describe('clone', () => {
+    it('creates a new Module instance', () => {
+      const module = new Module()
+      const clone = module.clone()
+      expect(clone).toBeInstanceOf(Module)
+      expect(clone).not.toBe(module)
+    })
+
+    it('copies registrations to the clone', () => {
+      const module = new Module()
+      const tokenPublic = 'publicToken'
+      const tokenPrivate = 'privateToken'
+      module.register(tokenPublic, {
+        constructor: Constructor,
+        lifecycle: 'transient',
+        visibility: 'public',
+      })
+      module.register(tokenPrivate, {
+        constructor: Constructor,
+        lifecycle: 'transient',
+        visibility: 'private',
+      })
+      const clone = module.clone()
+    
+      expect(clone.registrations.length).toBe(1)
+      expect(clone.exposes(tokenPublic)).toBe(true)
+      expect(clone.exposes(tokenPrivate)).toBe(false)
+      expect(() => clone.resolve(tokenPublic)).not.toThrow()
+    })
+
+    it('mutations to the clone do not affect the original module', () => {
+      const token = 'token'
+
+      const module = new Module()
+      module.register(token, {
+        constructor: Constructor,
+        lifecycle: 'transient',
+        visibility: 'public',
+      })
+
+      const clone = module.clone()
+      expect(() => clone.register(token, {
+        constructor: Constructor,
+        lifecycle: 'transient',
+        visibility: 'public',
+      })).toThrow()
+
+      expect(() => clone.resolve(token)).not.toThrow()
+      expect(() => module.resolve(token)).not.toThrow()
+    })
+  })
 })
