@@ -3,7 +3,13 @@ import { Identity } from './identity'
 import { Resolver } from './resolver'
 
 export class Context {
+  public static create() {
+    return new Context()
+  }
+
   private instances: Map<Identity, any> = new Map()
+
+  private constructor() {}
 
   public clear() {
     this.instances.clear()

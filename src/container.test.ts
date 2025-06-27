@@ -46,7 +46,7 @@ describe('Container (integration)', () => {
   })
 
   it('reuses instance from context for singleton lifecycle', () => {
-    const context = new Context()
+    const context = Context.create()
 
     const spy = jest.spyOn(context, 'resolve')
   
@@ -128,11 +128,11 @@ describe('Container (integration)', () => {
   it('uses passed resolution context when resolving scoped lifecycle', () => {
     const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
 
-    const rootContext = new Context()
+    const rootContext = Context.create()
 
     const rootContextSpy = jest.spyOn(rootContext, 'resolve')
 
-    const resolutionContext = new Context()
+    const resolutionContext = Context.create()
 
     const resolutionContextSpy = jest.spyOn(resolutionContext, 'resolve')
 
@@ -163,7 +163,7 @@ describe('Container (integration)', () => {
   it('uses new resolution context when resolving scoped lifecycle', () => {
     const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
 
-    const rootContext = new Context()
+    const rootContext = Context.create()
 
     const rootContextSpy = jest.spyOn(rootContext, 'resolve')
     const container = Container.create({ context: rootContext })
@@ -191,11 +191,11 @@ describe('Container (integration)', () => {
   it('uses root context when resolving singleton lifecycle', () => {
     const resolverMock = jest.fn(() => ({ value: 'singleton-value' }))
 
-    const rootContext = new Context()
+    const rootContext = Context.create()
 
     const rootContextSpy = jest.spyOn(rootContext, 'resolve')
 
-    const resolutionContext = new Context()
+    const resolutionContext = Context.create()
 
     const resolutionContextSpy = jest.spyOn(resolutionContext, 'resolve')
 
@@ -226,11 +226,11 @@ describe('Container (integration)', () => {
   it('ignores contexts when resolving transient lifecycle', () => {
     const resolverMock = jest.fn(() => ({ value: 'transient-value' }))
 
-    const rootContext = new Context()
+    const rootContext = Context.create()
 
     const rootContextSpy = jest.spyOn(rootContext, 'resolve')
 
-    const resolutionContext = new Context()
+    const resolutionContext = Context.create()
 
     const resolutionContextSpy = jest.spyOn(resolutionContext, 'resolve')
 

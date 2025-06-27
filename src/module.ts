@@ -2,6 +2,7 @@ import { Registration, RegistrationOptions } from './registration'
 import { TargetFactory, TargetConstructor } from './target'
 import { Container } from './container'
 import { Resolver } from './resolver'
+import { Context } from './context'
 import { Token } from './token'
 
 export type ModuleRegistrationVisibility = 'private' | 'public'
@@ -35,7 +36,9 @@ class ModuleRegistration<R = any> extends Registration<R> {
 }
 
 export class Module {
-  private readonly _container = Container.create<ModuleRegistration>()
+  private readonly _context = Context.create()
+
+  private readonly _container = Container.create<ModuleRegistration>({ context: this._context })
 
   public get registrations(): Readonly<Registration[]> {
     return this._container.registrations.filter(registration => {

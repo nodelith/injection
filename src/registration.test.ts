@@ -48,7 +48,7 @@ describe('Registration', () => {
 
   describe('calling resolve with scoped lifecycle', () => {
     it('resolves using the provided context', () => {
-      const context = new Context()
+      const context = Context.create()
       const registration = Registration.create(resolver, { lifecycle: 'scoped' })
 
       const resolution_0 = registration.resolve({ context })
@@ -81,7 +81,7 @@ describe('Registration', () => {
       })
 
       const bundle = { x: 1 }
-      const context = new Context()
+      const context = Context.create()
 
       const registrationClone = registration.clone({ 
         bundle,

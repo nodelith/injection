@@ -28,8 +28,8 @@ export class Registration<R = any> {
 
   protected constructor(resolver: Resolver<R>, options?: RegistrationOptions) {
     this.resolver = resolver
-    this.bundle = options?.bundle ?? {}
-    this.context = options?.context ?? new Context()
+    this.bundle = options?.bundle ?? Bundle.create()
+    this.context = options?.context ?? Context.create()
     this.lifecycle = options?.lifecycle ?? 'singleton'
   }
 
@@ -45,7 +45,7 @@ export class Registration<R = any> {
     const lifecycle = options?.lifecycle ?? this.lifecycle
 
     if(lifecycle === 'transient') {
-      return this.resolver(options?.bundle ?? {}) 
+      return this.resolver(options?.bundle ?? Bundle.create()) 
     }
 
     if(lifecycle === 'singleton') {

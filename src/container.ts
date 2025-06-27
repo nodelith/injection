@@ -38,12 +38,12 @@ export class Container<R extends Registration = Registration> {
   }
 
   public constructor(options?: ContainerDeclarationOptions) {
-    this.context = options?.context ?? new Context()
+    this.context = options?.context ?? Context.create()
     this.registry = new Map()
   }
 
   public resolve<R>(token: Token, options?: ContainerResolutionOptions): R {
-    const resolutionContext = options?.context ?? new Context()
+    const resolutionContext = options?.context ?? Context.create()
 
     const resolutionEntries = this.entries.map(([token, registration]): BundleDescriptorEntry => {
       return [token, { resolve(bundle: Bundle) {

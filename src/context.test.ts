@@ -4,7 +4,7 @@ import { Context } from './context'
 describe('Context', () => {
   describe('resolve', () => {
     it('calls the resolver function and returns its result', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction = (bundle: Bundle) => `${bundle.x}-${bundle.y}`
 
       const bundle = { x: 'prefix', y: 'suffix' }
@@ -13,7 +13,7 @@ describe('Context', () => {
     })
 
     it('returns the same result on repeated calls to the same resolver', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction = jest.fn((bundle: Bundle) => ({ value: bundle.x }))
 
       const result1 = context.resolve(someFunction, { value: 1 })
@@ -24,7 +24,7 @@ describe('Context', () => {
     })
 
     it('calls different resolvers independently', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction_0 = jest.fn(() => '0')
       const someFunction_1 = jest.fn(() => '1')
 
@@ -38,7 +38,7 @@ describe('Context', () => {
     })
 
     it('passes dependencies to the function', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction = jest.fn((bundle: Bundle) => `${bundle.x}-${bundle.y}`)
 
       const bundle = { x: 'prefix', y: 'suffix' }
@@ -48,7 +48,7 @@ describe('Context', () => {
     })
 
     it('ensures resolve uses a stable identity for each function', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction = () => 123
       const identity1 = context['resolve'](someFunction)
       const identity2 = context['resolve'](someFunction)
@@ -56,7 +56,7 @@ describe('Context', () => {
     })
 
     it('ensures identities are unique for different functions', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction_0 = () => '1'
       const someFunction_1 = () => '2'
       const result_0 = context.resolve(someFunction_0)
@@ -68,7 +68,7 @@ describe('Context', () => {
 
   describe('clear', () => {
     it('evicts cached result and re-resolves', () => {
-      const context = new Context()
+      const context = Context.create()
       const someFunction = jest.fn(() => Math.random())
 
       const result_0 = context.resolve(someFunction)
