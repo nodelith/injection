@@ -17,29 +17,29 @@ export class Container<R extends Registration = Registration> {
     return new Container(options)
   }
   
-  private readonly _rootContext: Context
+  private readonly context: Context
 
-  private readonly _registrations: Map<Token, R>
+  private readonly registry: Map<Token, R>
 
   public get registrations(): ReadonlyArray<R> {
-    return [...this._registrations.values()]
+    return [...this.registry.values()]
   }
 
   public get entries(): Readonly<[Token, R][]> {
-    return [...this._registrations.entries()]
+    return [...this.registry.entries()]
   }
 
   public get(token: Token): undefined | R {
-    return this._registrations.get(token)
+    return this.registry.get(token)
   }
 
   public has(token: Token): boolean {
-    return this._registrations.has(token)
+    return this.registry.has(token)
   }
 
-  protected constructor(options?: ContainerDeclarationOptions) {
-    this._rootContext = options?.context ?? new Context()
-    this._registrations = new Map()
+  public constructor(options?: ContainerDeclarationOptions) {
+    this.context = options?.context ?? new Context()
+    this.registry = new Map()
   }
 
   public resolve<R>(token: Token, options?: ContainerResolutionOptions): R {
@@ -57,7 +57,7 @@ export class Container<R extends Registration = Registration> {
       ...resolutionEntries
     )
 
-    return this._registrations.get(token)?.resolve({ ...options,
+    return this.registry.get(token)?.resolve({ ...options,
       context: resolutionContext,
       bundle: Bundle.merge(
         resolutionBundle,
@@ -67,8 +67,8 @@ export class Container<R extends Registration = Registration> {
   }
 
   public register<T>(token: Token, registration: R & Registration<T>): void {
-    this._registrations.set(token, registration.clone({
-      context: this._rootContext,
+    this.registry.set(token, registration.clone({
+      context: this.context,
     }) as R & Registration<T>)
   }
 
