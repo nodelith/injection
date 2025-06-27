@@ -1,6 +1,5 @@
 import { Registration, RegistrationOptions } from './registration'
 import { TargetFactory, TargetConstructor } from './target'
-import { Bundle, BundleDescriptorEntry } from './bundle'
 import { Container } from './container'
 import { Resolver } from './resolver'
 import { Token } from './token'
@@ -37,8 +36,6 @@ class ModuleRegistration<R = any> extends Registration<R> {
 
 export class Module {
   private readonly _container = Container.create<ModuleRegistration>()
-  
-  private readonly _modules = new Set<Module>([this])
 
   public get registrations(): Readonly<Registration[]> {
     return this._container.registrations.filter(registration => {
@@ -69,25 +66,29 @@ export class Module {
     | ModuleRegistrationOptions & { constructor: TargetConstructor }
   )): void {
     const resolver = Resolver.create(options)
-    this.setRegistration(token, resolver, options)
+    this.setResolver(token, resolver, options)
   }
 
   public registerFactory(token: Token, factory: TargetFactory, options: ModuleRegistrationOptions): void {
     const resolver = Resolver.create({ factory })
-    this.setRegistration(token, resolver, options)
+    this.setResolver(token, resolver, options)
   }
 
   public registerConstructor(token: Token, constructor: TargetConstructor, options: ModuleRegistrationOptions): void {
     const resolver = Resolver.create({ constructor })
-    this.setRegistration(token, resolver, options)
+    this.setResolver(token, resolver, options)
   }
 
-  private setRegistration<R extends object>(token: Token, resolver: Resolver<R>, options?: ModuleRegistrationOptions): void {
+  protected setResolver<R extends object>(token: Token, resolver: Resolver<R>, options?: ModuleRegistrationOptions): void {
+    const registration = ModuleRegistration.create(resolver, options)
+    this.setRegistration(token, registration)
+  }
+
+  protected setRegistration<R extends object>(token: Token, registration: ModuleRegistration<R>): void {
     if (this._container.has(token)) {
       throw new Error(`Could not register token "${token.toString()}". Module already contains a registration assigned to the same token.`)
     }
 
-    const registration = ModuleRegistration.create(resolver, options)
     this._container.register(token, registration)
   }
 
