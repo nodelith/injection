@@ -1,5 +1,5 @@
-import { Container } from './container'
 import { Registration } from './registration'
+import { Container } from './container'
 import { Context } from './context'
 import { Token } from './token'
 
@@ -262,8 +262,8 @@ describe('Container (integration)', () => {
     const container = Container.create()
     const registration = Registration.create(value('foo'))
 
-    container.register(token_a, registration)
-
+    const token = container.register(token_a, registration)
+ 
     expect(container.entries).toEqual([[token_a, expect.any(Registration)]])
     expect(container.registrations).toEqual([registration])
   })

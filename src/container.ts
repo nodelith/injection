@@ -1,4 +1,4 @@
-import { Token } from './token'
+import { BrandedToken, Token } from './token'
 import { Context } from './context'
 import { Registration } from './registration'
 import { Bundle, BundleDescriptorEntry } from './bundle'
@@ -42,7 +42,7 @@ export class Container<R extends Registration = Registration> {
     this.registry = new Map()
   }
 
-  public resolve<R>(token: Token, options?: ContainerResolutionOptions): R {
+  public resolve<T>(token: Token<T>, options?: ContainerResolutionOptions): T {
     const resolutionContext = options?.context ?? Context.create()
 
     const resolutionEntries = this.entries.map(([token, registration]): BundleDescriptorEntry => {
@@ -66,10 +66,12 @@ export class Container<R extends Registration = Registration> {
     })
   }
 
-  public register<T>(token: Token, registration: R & Registration<T>): void {
+  public register<T>(token: Token<T>, registration: R & Registration<T>): BrandedToken<T> {
     this.registry.set(token, registration.clone({
       context: this.context,
     }) as R & Registration<T>)
+
+    return token as BrandedToken<T>
   }
 
   public clone(options?: ContainerDeclarationOptions): Container<R> {
