@@ -1,12 +1,15 @@
 import { Registration } from './registration'
+import { Resolver } from './resolver'
 import { Context } from './context'
 import { Bundle } from './bundle'
 
 describe('Registration', () => {
-  const resolver = jest.fn((bundle?: Bundle) => ({
+  const factory = (bundle?: Bundle) => ({ 
     timestamp: Date.now(),
-    bundle,
-  }))
+    bundle, 
+  })
+
+  const resolver = jest.fn(Resolver.create({ factory }))
 
   beforeEach(() => {
     jest.clearAllMocks()

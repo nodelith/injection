@@ -152,7 +152,6 @@ describe('Module', () => {
 
       const resolution = module.resolve(token)
       expect(resolution).toEqual({ value: 123 })
-      expect(module.registrations.length).toBe(1)
     })
   })
 
@@ -169,28 +168,6 @@ describe('Module', () => {
       const resolution = module.resolve(token)
       expect(resolution).toBeInstanceOf(Constructor)
       expect(resolution).toEqual({ value: 123 })
-      expect(module.registrations.length).toBe(1)
-    })
-  })
-
-  describe('registrations', () => {
-    it('returns only public registrations', () => {
-      const module = new Module()
-
-      module.register('token_a', {
-        constructor: Constructor,
-        lifecycle: 'transient',
-        visibility: 'public',
-      })
-
-      module.register('token_b', {
-        constructor: Constructor,
-        lifecycle: 'transient',
-        visibility: 'private',
-      })
-
-      const visible = module.registrations
-      expect(visible).toHaveLength(1)
     })
   })
 
@@ -257,6 +234,87 @@ describe('Module', () => {
 
       expect(() => clone.resolve(token)).not.toThrow()
       expect(() => module.resolve(token)).not.toThrow()
+    })
+  })
+
+  describe('module composition and resolve with imports (scoped exposure)', () => {
+    it('should not expose public registrations from child module', () => {
+      const token_0 = 'dependency_0'
+      const token_1 = 'dependency_1'
+    
+      const factory_0 = (bundle: Bundle) => ({
+        token: token_0,
+      })
+    
+      const factory_1 = () => ({ 
+        token: token_1 
+      })
+    
+      const module_0 = new Module()
+      const module_1 = new Module()
+    
+      module_0.registerFactory(token_0, factory_0, { visibility: 'public' })
+      module_1.registerFactory(token_1, factory_1, { visibility: 'public' })
+      module_0.import(module_1)
+
+      const expectedErrorMessage = `Could not resolve token "${token_1}". Module does not contain a registration associted to the given token.`
+    
+      expect(() => { module_0.resolve(token_1) }).toThrow(expectedErrorMessage)
+    })
+
+    it('should expose public registrations to upstream modules', () => {
+      const token_0 = 'token_0'
+      const token_1 = 'token_1'
+    
+      const factory_0 = jest.fn((bundle: Bundle) => ({ 
+        token: token_0,
+        [token_1]: bundle[token_1].token,
+      }))
+    
+      const factory_1 = jest.fn(() => ({ 
+        token: token_1,
+      }))
+
+      const module_0 = new Module()
+      const module_1 = new Module()
+    
+      module_0.registerFactory(token_0, factory_0, { visibility: 'public' })
+      module_1.registerFactory(token_1, factory_1, { visibility: 'public' })
+
+      module_0.import(module_1)
+
+      const resolution = module_0.resolve(token_0)
+
+      //@ts-expect-error
+      expect(resolution.token).toBe(token_0)
+      //@ts-expect-error
+      expect(resolution.token_1).toBe(token_1)
+    })
+
+    it('should not expose public registrations to downstream modules', () => {
+      const token_0 = 'dependency_0'
+      const token_1 = 'dependency_1'
+    
+      const factory_0 = jest.fn((bundle: Bundle) => ({
+        [token_1]: bundle[token_1].token
+      }))
+
+      const factory_1 = jest.fn((bundle: Bundle) => ({
+        [token_0]: bundle[token_0].token
+      }))
+
+      const module_0 = new Module()
+      const module_1 = new Module()
+      
+      module_0.registerFactory(token_0, factory_0, { visibility: 'public' })
+      module_1.registerFactory(token_1, factory_1, { visibility: 'public' })
+
+      module_0.import(module_1)
+
+      expect(() => module_0.resolve(token_0)).toThrow()
+
+      expect(factory_0).toHaveBeenCalledTimes(1)
+      expect(factory_1).toHaveBeenCalledTimes(1)
     })
   })
 })

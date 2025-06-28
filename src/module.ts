@@ -1,9 +1,14 @@
+import { Container, ContainerDeclarationOptions, ContainerResolutionOptions } from './container'
 import { Registration, RegistrationOptions } from './registration'
 import { TargetFactory, TargetConstructor } from './target'
-import { Container } from './container'
+import { Bundle, BundleDescriptorEntry } from './bundle'
 import { Resolver } from './resolver'
 import { Context } from './context'
 import { Token } from './token'
+
+export type ModuleDeclarationOptions = ContainerDeclarationOptions
+
+export type ModuleResolutionOptions = ContainerResolutionOptions
 
 export type ModuleRegistrationVisibility = 'private' | 'public'
 
@@ -36,9 +41,11 @@ class ModuleRegistration<R = any> extends Registration<R> {
 }
 
 export class Module {
-  private readonly _context = Context.create()
-
-  private readonly _container = Container.create<ModuleRegistration>({ context: this._context })
+  private readonly _modules = new Set<Module>()
+  
+  private readonly _container: Container<ModuleRegistration>
+  
+  private readonly _context: Context
 
   public get registrations(): Readonly<Registration[]> {
     return this._container.registrations.filter(registration => {
@@ -49,15 +56,29 @@ export class Module {
   public get entries(): Readonly<[Token, ModuleRegistration][]> {
     return this._container.entries.filter(([_token, registration]) => {
       return registration.visibility === 'public'
-    })
+    })    
+  }
+
+  public get modules(): Module[] {
+    return [...this._modules]
+  }
+
+  public constructor(options?: ModuleDeclarationOptions) {
+    this._context = options?.context ?? Context.create()
+    this._container = Container.create( {context: this._context })
   }
 
   public exposes(token: Token): boolean {
     return !!(this._container.get(token)?.visibility === 'public')
   }
 
-  public clone(): Module {
-    const module = new Module()
+  public import (module: Module): void {
+    const clone = module.clone({ context: this._context })
+    this._modules.add(clone)
+  }
+
+  public clone(options?: ModuleDeclarationOptions): Module {
+    const module = new Module(options)
     module.setRegistrations(...this._container.entries)
     return module
   }
@@ -109,7 +130,7 @@ export class Module {
     this._container.register(token, registration)
   }
 
-  public resolve<T>(token: Token): T {
+  public resolve<T>(token: Token, options?: ModuleResolutionOptions): T {
     if(!this._container.has(token)) {
       throw new Error(`Could not resolve token "${token.toString()}". Module does not contain a registration associted to the given token.`)
     }
@@ -117,6 +138,23 @@ export class Module {
     if(!this.exposes(token)) {
       throw new Error(`Could not resolve token "${token.toString()}". Module does not expose a registration associted to the given token.`)
     }
-    return this._container.resolve(token)  
+
+    const resolutionContext = options?.context ?? Context.create()
+
+    const resolutionEntries = this.modules.flatMap((module): BundleDescriptorEntry[] => {
+      return module.entries.map(([token, registration]): BundleDescriptorEntry => [token, {
+        resolve: (bundle: Bundle) => registration.resolve({ 
+          context: options?.context ?? Context.create(),
+          bundle 
+        })
+      }])
+    })
+
+    const resolutionBundle = Bundle.create(...resolutionEntries)
+
+    return this._container.resolve(token, {
+      context: resolutionContext,
+      bundle: resolutionBundle,
+    })
   }
 }
