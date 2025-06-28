@@ -85,8 +85,26 @@ export function createIdentity() {
   return encodeIdentity(uuid)
 }
 
-export function extractIdentity(object: Object): string {
-  if(!(IDENTITY_KEY in object)) {
+export function bindIdentity(source: Object, target: Object): Identity {
+  const identity = extractIdentity(source)
+
+  const existing = target[IDENTITY_KEY]
+
+  if (Object.getOwnPropertyDescriptor(target, IDENTITY_KEY)) {
+    throw new Error(`Target already has an identity value: ${existing}`)
+  }
+
+  Object.defineProperty(target, IDENTITY_KEY, {
+    value: identity,
+    configurable: false,
+    enumerable: false,
+  })
+
+  return target[IDENTITY_KEY]
+}
+
+export function extractIdentity(object: Object): Identity {
+  if (!Object.getOwnPropertyDescriptor(object, IDENTITY_KEY)) {
     Object.defineProperty(object, IDENTITY_KEY, {
       value: createIdentity(),
       configurable: false,
@@ -102,4 +120,5 @@ export namespace Identity {
   export const create = createIdentity
   export const encode = encodeIdentity
   export const decode = decodeIdentity
+  export const bind = bindIdentity
 }

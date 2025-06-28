@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import {
+  bindIdentity,
   encodeIdentity,
   decodeIdentity,
   createIdentity,
@@ -72,6 +73,43 @@ describe('Identity', () => {
       const identity_0 = createIdentity()
       const identity_1 = createIdentity()
       expect(identity_0).not.toBe(identity_1)
+    })
+  })
+
+  describe('bindIdentity', () => {
+    it('binds the identity of the source to the target', () => {
+      const source = {}
+      const target = {}
+  
+      const sourceId = extractIdentity(source)
+      const returnedId = bindIdentity(source, target)
+  
+      expect(returnedId).toBe(sourceId)
+      expect(extractIdentity(target)).toBe(sourceId)
+    })
+  
+    it('creates identity on source if missing before assigning to target', () => {
+      const source = {}
+      const target = {}
+  
+      expect(Object.getOwnPropertyDescriptor(source, Symbol.for('identity'))).toBeUndefined()
+  
+      const aliasId = bindIdentity(source, target)
+  
+      expect(typeof aliasId).toBe('string')
+      expect(aliasId.length).toBe(22)
+      expect(extractIdentity(source)).toBe(aliasId)
+      expect(extractIdentity(target)).toBe(aliasId)
+    })
+  
+    it('throws if target already has an identity', () => {
+      const source = {}
+      const target = {}
+  
+      extractIdentity(source)
+      extractIdentity(target)
+  
+      expect(() => bindIdentity(source, target)).toThrow(/Target already has an identity value/)
     })
   })
 
@@ -150,18 +188,27 @@ describe('Identity', () => {
   describe('namespace', () => {
     it('exposes create function', () => {
       expect(typeof Identity.create).toBe('function')
+      expect(Identity.create).toBe(createIdentity)
     })
 
     it('exposes encode function', () => {
       expect(typeof Identity.encode).toBe('function')
+      expect(Identity.encode).toBe(encodeIdentity)
     })
 
     it('exposes decode function', () => {
       expect(typeof Identity.decode).toBe('function')
+      expect(Identity.decode).toBe(decodeIdentity)
     })
 
     it('exposes extract function', () => {
       expect(typeof Identity.extract).toBe('function')
+      expect(Identity.extract).toBe(extractIdentity)
+    })
+
+    it('exposes extract function', () => {
+      expect(typeof Identity.bind).toBe('function')
+      expect(Identity.bind).toBe(bindIdentity)
     })
   })
 })
