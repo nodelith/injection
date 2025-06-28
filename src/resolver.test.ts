@@ -50,8 +50,17 @@ describe('Resolver', () => {
   
       expect(resolverId).toBe(constructorId)
     })
-  
-  
+
+    it('binds factory identity to resolver', () => {
+      const factory = () => ({})
+      const resolver = createResolver({ factory })
+
+      const factoryId = Identity.extract(factory)
+      const resolverId = Identity.extract(resolver)
+
+      expect(resolverId).toBe(factoryId)
+    })
+
     it('throws if no valid registration target is provided', () => {
       const expectedErrorMessage = 'Could not create resolver. Missing a valid registration target.'
       // @ts-expect-error

@@ -13,7 +13,9 @@ export type ResolverOptions<R = any> =
 
 export function createResolver<R>(options: ResolverOptions<R>): Resolver<R> {
   if('factory' in options) {
-    return (bundle: Bundle) => options.factory(bundle)
+    const resolver = (bundle: Bundle) => options.factory(bundle)
+    Identity.bind(options.factory, resolver)
+    return resolver
   }
 
   if('constructor' in options && Object.hasOwnProperty.call(options, 'constructor')) {
