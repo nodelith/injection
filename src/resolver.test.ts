@@ -1,6 +1,5 @@
 import { Resolver, createResolver } from './resolver'
-import { Bundle } from './bundle'
-import { TargetFactory } from './target'
+import { Identity } from './identity'
 
 describe('Resolver', () => {
   describe('createResolver', () => {
@@ -33,6 +32,25 @@ describe('Resolver', () => {
       expect(resolution).toBeInstanceOf(Constructor)
       expect(resolution.foo).toBe('bar')
     })
+
+    it('binds constructor identity to resolver', () => {
+      class TestClass {
+        value = 'constructed'
+        constructor(_bundle: any) {}
+      }
+  
+      const resolver = createResolver({ constructor: TestClass })
+      const result = resolver({})
+  
+      expect(result).toBeInstanceOf(TestClass)
+      expect(result.value).toBe('constructed')
+  
+      const constructorId = Identity.extract(TestClass)
+      const resolverId = Identity.extract(resolver)
+  
+      expect(resolverId).toBe(constructorId)
+    })
+  
   
     it('throws if no valid registration target is provided', () => {
       const expectedErrorMessage = 'Could not create resolver. Missing a valid registration target.'
