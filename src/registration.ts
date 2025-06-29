@@ -1,3 +1,4 @@
+import { createProxy } from './proxy'
 import { Bundle } from './bundle'
 import { Context } from  './context'
 import { Resolver } from './resolver'
@@ -14,13 +15,11 @@ export type RegistrationOptions = {
 }
 
 export class Registration<R = any> {
-  public static create<R>(resolver: Resolver<R>, options?: RegistrationOptions) {
-    return new Registration<R>(resolver, options)
+  public static create<T>(resolver: Resolver<T>, options?: RegistrationOptions): Registration<T> {
+    return new Registration<T>(resolver, options)
   }
 
   protected readonly resolver: Resolver<R>
-
-  protected readonly bundle: Bundle
 
   protected readonly context: Context
 
@@ -28,7 +27,6 @@ export class Registration<R = any> {
 
   protected constructor(resolver: Resolver<R>, options?: RegistrationOptions) {
     this.resolver = resolver
-    this.bundle = options?.bundle ?? Bundle.create()
     this.context = options?.context ?? Context.create()
     this.lifecycle = options?.lifecycle ?? 'singleton'
   }
@@ -36,8 +34,7 @@ export class Registration<R = any> {
   public clone(options?: RegistrationOptions): Registration<R> {
     return new Registration(this.resolver, {
       lifecycle: this.lifecycle,
-      bundle: options?.bundle ?? this.bundle,
-      context: options?.context ?? this.context, 
+      context: options?.context ?? this.context,
     })
   }
   
@@ -63,3 +60,4 @@ export class Registration<R = any> {
     throw new Error(`Could not resolve registration. Invalid lifecycle: ${this.lifecycle}.`)
   }
 }
+
