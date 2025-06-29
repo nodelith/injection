@@ -45,9 +45,9 @@ export class Container<R extends Registration = Registration> {
   public resolve<T>(token: Token<T>, options?: ContainerResolutionOptions): T {
     const resolutionContext = options?.context ?? Context.create()
 
-    const resolutionEntries = this.entries.map(([token, registration]): BundleDescriptorEntry => {
-      return [token, { resolve(bundle: Bundle) {
-        return registration.resolve({ bundle, 
+    const resolutionEntries = this.entries.map(([token]): BundleDescriptorEntry => {
+      return [token, { resolve: (bundle: Bundle) => {
+        return this.resolve(token, { bundle, 
           context: resolutionContext
         })
       }}]
@@ -57,13 +57,15 @@ export class Container<R extends Registration = Registration> {
       ...resolutionEntries
     )
 
-    return this.registry.get(token)?.resolve({ ...options,
+    const resolution =  this.registry.get(token)?.resolve({ ...options,
       context: resolutionContext,
       bundle: Bundle.merge(
         resolutionBundle,
         options?.bundle,
       )
     })
+
+    return resolution
   }
 
   public register<T>(token: Token<T>, registration: R & Registration<T>): BrandedToken<T> {

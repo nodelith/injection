@@ -1,4 +1,3 @@
-import { createProxy } from './proxy'
 import { Bundle } from './bundle'
 import { Context } from  './context'
 import { Resolver } from './resolver'
@@ -8,14 +7,19 @@ type RegistrationLifecycle =
   | 'transient' // Will always return a new instance of the registration
   | 'singleton' // Will return an instance from the root context if one exist
 
-export type RegistrationOptions = {
+export type RegistrationDeclarationOptions = {
+  context?: Context | undefined,
+  lifecycle?: RegistrationLifecycle,
+}
+
+export type RegistrationResolutionOptions = {
   bundle?: Bundle | undefined
   context?: Context | undefined,
   lifecycle?: RegistrationLifecycle,
 }
 
 export class Registration<R = any> {
-  public static create<T>(resolver: Resolver<T>, options?: RegistrationOptions): Registration<T> {
+  public static create<T>(resolver: Resolver<T>, options?: RegistrationDeclarationOptions): Registration<T> {
     return new Registration<T>(resolver, options)
   }
 
@@ -25,20 +29,20 @@ export class Registration<R = any> {
 
   public readonly lifecycle: RegistrationLifecycle
 
-  protected constructor(resolver: Resolver<R>, options?: RegistrationOptions) {
+  protected constructor(resolver: Resolver<R>, options?: RegistrationDeclarationOptions) {
     this.resolver = resolver
     this.context = options?.context ?? Context.create()
     this.lifecycle = options?.lifecycle ?? 'singleton'
   }
 
-  public clone(options?: RegistrationOptions): Registration<R> {
+  public clone(options?: RegistrationDeclarationOptions): Registration<R> {
     return new Registration(this.resolver, {
       lifecycle: this.lifecycle,
       context: options?.context ?? this.context,
     })
   }
   
-  public resolve(options?: RegistrationOptions): R {
+  public resolve(options?: RegistrationResolutionOptions): R {
     const lifecycle = options?.lifecycle ?? this.lifecycle
 
     if(lifecycle === 'transient') {
