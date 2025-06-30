@@ -1,39 +1,41 @@
 import { 
-  ConstructorTarget,
-  ConstructorTargetWrapper,
-  FactoryTarget,
-  FactoryTargetWrapper,
-  FunctionTargetWrapper,
-  StaticTargetWrapper
+  TargetConstructor,
+  TargetConstructorWrapper,
+  TargetFactory,
+  TargetFactoryWrapper,
+  TargetFunction,
+  TargetFunctionWrapper,
+  TargetStatic,
+  TargetStaticWrapper
 } from 'target'
 import { Identity } from './identity'
 import { Bundle } from './bundle'
 
 export type Resolver<T = any> = (bundle: Bundle) => T
 
-export type ConstructorResolverOptions<T extends object = any> =
-  (ConstructorTargetWrapper<T> & { resolution?: 'lazy' | 'eager' })
+export type ResolverConstructorOptions<T extends object = any> =
+  (TargetConstructorWrapper<T> & { resolution?: 'lazy' | 'eager' })
 
-export type FactoryResolverOptions<T extends object = any> =
-  (FactoryTargetWrapper<T> & { resolution?: 'lazy' | 'eager' })
+export type ResolverFactoryOptions<T extends object = any> =
+  (TargetFactoryWrapper<T> & { resolution?: 'lazy' | 'eager' })
 
-export type FunctionResolverOptions<T extends any = any> = 
-  (FunctionTargetWrapper<T> & { resolution?: 'eager' })
+export type ResolverFunctionOptions<T extends any = any> = 
+  (TargetFunctionWrapper<T> & { resolution?: 'eager' })
 
-export type StaticResolverOptions<T extends any = any> = 
-  (StaticTargetWrapper<T> & { resolution?: 'eager' })
+export type ResolverStaticOptions<T extends any = any> = 
+  (TargetStaticWrapper<T> & { resolution?: 'eager' })
 
-export type ObjectResolverOptions<T extends object = any> =
-  | ConstructorResolverOptions<T>
-  | FactoryResolverOptions<T>
+export type ResolverObjectOptions<T extends object = any> =
+  | ResolverConstructorOptions<T>
+  | ResolverFactoryOptions<T>
 
-export type ValueResolverOptions<T extends any = any> = 
-  | FunctionResolverOptions<T>
-  | StaticResolverOptions<T>
+export type ResolverValueOptions<T extends any = any> = 
+  | ResolverFunctionOptions<T>
+  | ResolverStaticOptions<T>
 
 export type ResolverOptions<T extends any> = T extends object 
-  ? ObjectResolverOptions<T> | ValueResolverOptions<T>
-    : ValueResolverOptions<T>
+  ? ResolverObjectOptions<T> | ResolverValueOptions<T>
+    : ResolverValueOptions<T>
 
 
 export function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: object): Resolver<T> {
@@ -85,25 +87,25 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
 
   if('factory' in options && resolution === 'eager') {
     return Identity.bind(options.factory, (bundle: Bundle) => {
-      return (options.factory as FactoryTarget<T & object>)(bundle)
+      return (options.factory as TargetFactory<T & object>)(bundle)
     })
   }
 
   if('factory' in options && resolution === 'lazy') {
     return createProxy(Identity.bind(options.factory, (bundle: Bundle) => {
-      return (options.factory as FactoryTarget<T & object>)(bundle)
+      return (options.factory as TargetFactory<T & object>)(bundle)
     }))
   }
 
   if('constructor' in options && resolution === 'eager') {
     return Identity.bind(options.constructor, (bundle: Bundle) => {
-      return new (options.constructor as ConstructorTarget<T & object>)(bundle)
+      return new (options.constructor as TargetConstructor<T & object>)(bundle)
     })
   }
 
   if('constructor' in options && resolution === 'lazy') {
     return createProxy(Identity.bind(options.constructor, (bundle: Bundle) => {
-      return new (options.constructor as ConstructorTarget<T & object>)(bundle) 
+      return new (options.constructor as TargetConstructor<T & object>)(bundle) 
     }), options.constructor.prototype)
   }
 
