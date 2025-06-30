@@ -1,6 +1,5 @@
-import { Resolver, createResolver } from './resolver'
+import { createResolver } from './resolver'
 import { Identity } from './identity'
-import { Bundle } from './bundle'
 
 describe('Resolver', () => {
   it('creates a lazy resolver from a factory', () => {

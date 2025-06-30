@@ -1,20 +1,40 @@
-import { TargetConstructor, TargetFactory } from 'target'
+import { 
+  ConstructorTarget,
+  ConstructorTargetWrapper,
+  FactoryTarget,
+  FactoryTargetWrapper,
+  FunctionTargetWrapper,
+  StaticTargetWrapper
+} from 'target'
 import { Identity } from './identity'
 import { Bundle } from './bundle'
 
-export type Resolver<T extends object = any> = (bundle: Bundle) => T
+export type Resolver<T = any> = (bundle: Bundle) => T
 
-export type ResolverFactoryTarget<T extends object = any> = { factory: TargetFactory<T> }
+export type ConstructorResolverOptions<T extends object = any> =
+  (ConstructorTargetWrapper<T> & { resolution?: 'lazy' | 'eager' })
 
-export type ResolverControllerTarget<T extends object = any> = { constructor: TargetConstructor<T> }
+export type FactoryResolverOptions<T extends object = any> =
+  (FactoryTargetWrapper<T> & { resolution?: 'lazy' | 'eager' })
 
-export type ResolverTarget<T extends object = any> = ResolverFactoryTarget<T> | ResolverControllerTarget<T> 
+export type FunctionResolverOptions<T extends any = any> = 
+  (FunctionTargetWrapper<T> & { resolution?: 'eager' })
 
-export const ResolutionType = ['lazy', 'eager'] as const
+export type StaticResolverOptions<T extends any = any> = 
+  (StaticTargetWrapper<T> & { resolution?: 'eager' })
 
-export type ResolutionType = typeof ResolutionType[number]
+export type ObjectResolverOptions<T extends object = any> =
+  | ConstructorResolverOptions<T>
+  | FactoryResolverOptions<T>
 
-export type ResolverOptions = { resolution?: ResolutionType }
+export type ValueResolverOptions<T extends any = any> = 
+  | FunctionResolverOptions<T>
+  | StaticResolverOptions<T>
+
+export type ResolverOptions<T extends any> = T extends object 
+  ? ObjectResolverOptions<T> | ValueResolverOptions<T>
+    : ValueResolverOptions<T>
+
 
 export function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: object): Resolver<T> {
   const resolution: { instance?: T } = { }
@@ -52,37 +72,39 @@ export function createProxy<T extends object = any>(resolver: Resolver<T>, proto
   })
 }
     
-export function createResolver<T extends object = any>(options: ResolverTarget<T> & ResolverOptions): Resolver<T> {
+export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T> {
   const resolution = options.resolution ?? 'eager'
 
-  if(!ResolutionType.includes(resolution)) {
-    throw new Error('')
+  if('static' in options) {
+    throw new Error('Not Implemented')
   }
 
-  if(resolution === 'lazy') {
-    if('factory' in options) {
-      return createProxy(Identity.bind(options.factory, (bundle: Bundle) => {
-        return options.factory(bundle)
-      }))
-    }
-    
-    if('constructor' in options) {
-      return createProxy(Identity.bind(options.constructor, (bundle: Bundle) => {
-        return new options.constructor(bundle)
-      }), options.constructor.prototype)
-    }
+  if('function' in options) {
+    throw new Error('Not Implemented')
   }
 
-  if('factory' in options) {
+  if('factory' in options && resolution === 'eager') {
     return Identity.bind(options.factory, (bundle: Bundle) => {
-      return options.factory(bundle)
+      return (options.factory as FactoryTarget<T & object>)(bundle)
     })
   }
-  
-  if('constructor' in options) {
+
+  if('factory' in options && resolution === 'lazy') {
+    return createProxy(Identity.bind(options.factory, (bundle: Bundle) => {
+      return (options.factory as FactoryTarget<T & object>)(bundle)
+    }))
+  }
+
+  if('constructor' in options && resolution === 'eager') {
     return Identity.bind(options.constructor, (bundle: Bundle) => {
-      return new options.constructor(bundle)
+      return new (options.constructor as ConstructorTarget<T & object>)(bundle)
     })
+  }
+
+  if('constructor' in options && resolution === 'lazy') {
+    return createProxy(Identity.bind(options.constructor, (bundle: Bundle) => {
+      return new (options.constructor as ConstructorTarget<T & object>)(bundle) 
+    }), options.constructor.prototype)
   }
 
   throw new Error(`Could not create resolver. Invalid registration options.`)
