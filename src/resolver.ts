@@ -78,7 +78,9 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
   const resolution = options.resolution ?? 'eager'
 
   if('static' in options) {
-    throw new Error('Not Implemented')
+    return (_bundle: Bundle) => {
+      return options.static as TargetStatic<T>
+    }
   }
 
   if('function' in options) {

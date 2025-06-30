@@ -27,7 +27,7 @@ describe('Resolver', () => {
     expect(result).toBeInstanceOf(Target)
   })
 
-  it('creates a eager resolver from a factory', () => {
+  it('creates an eager resolver from a factory', () => {
     const target = jest.fn(() => ({ foo: 'bar' }))
 
     const resolver = createResolver({ 
@@ -39,7 +39,7 @@ describe('Resolver', () => {
     expect(result.foo).toEqual('bar')
   })
 
-  it('creates a eager resolver from a constructor', () => {
+  it('creates an eager resolver from a constructor', () => {
     class Target { foo = 'bar' }
 
     const resolver = createResolver({
@@ -365,5 +365,62 @@ describe('Resolver', () => {
     const result = resolver({})
     result.foo = 'modified'
     expect(result.foo).toBe('modified')
+  })
+
+  it('creates resolvers for object static values', () => {
+    const staticValue = { foo: 'bar', baz: 123 }
+
+    const resolver = createResolver<typeof staticValue>({
+      static: staticValue
+    })
+
+    const result = resolver({})
+    expect(result).toBe(staticValue)
+    expect(result.foo).toBe('bar')
+    expect(result.baz).toBe(123)
+  })
+
+  it('creates resolvers for primitive static value', () => {
+    const staticValue = 'hello world'
+
+    const resolver = createResolver<string>({
+      static: staticValue
+    })
+
+    const result = resolver({})
+    expect(result).toBe(staticValue)
+    expect(typeof result).toBe('string')
+  })
+
+  it('creates resolvers for null static value', () => {
+    const resolver = createResolver<null>({
+      static: null
+    })
+
+    const result = resolver({})
+    expect(result).toBe(null)
+  })
+
+
+  it('creates resolvers for undefined static value', () => {
+    const resolver = createResolver<undefined>({
+      static: undefined
+    })
+
+    const result = resolver({})
+    expect(result).toBe(undefined)
+  })
+
+  it('ignores resolution option for static resolver', () => {
+    const staticValue = { foo: 'bar' }
+
+    const resolver = createResolver<typeof staticValue>({
+      // @ts-expect-error
+      static: staticValue,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect(result).toBe(staticValue)
   })
 })
