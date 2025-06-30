@@ -85,7 +85,7 @@ export function createIdentity() {
   return encodeIdentity(uuid)
 }
 
-export function bindIdentity(source: Object, target: Object): Identity {
+export function bindIdentity<T extends object = any>(source: object, target: T): T {
   const identity = extractIdentity(source)
 
   const existing = target[IDENTITY_KEY]
@@ -100,7 +100,7 @@ export function bindIdentity(source: Object, target: Object): Identity {
     enumerable: false,
   })
 
-  return target[IDENTITY_KEY]
+  return target
 }
 
 export function extractIdentity(object: Object): Identity {

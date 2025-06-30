@@ -82,9 +82,9 @@ describe('Identity', () => {
       const target = {}
   
       const sourceId = extractIdentity(source)
-      const returnedId = bindIdentity(source, target)
+      const returnedTarget = bindIdentity(source, target)
   
-      expect(returnedId).toBe(sourceId)
+      expect(returnedTarget).toBe(target)
       expect(extractIdentity(target)).toBe(sourceId)
     })
   
@@ -94,12 +94,12 @@ describe('Identity', () => {
   
       expect(Object.getOwnPropertyDescriptor(source, Symbol.for('identity'))).toBeUndefined()
   
-      const aliasId = bindIdentity(source, target)
+      const returnedTarget = bindIdentity(source, target)
   
-      expect(typeof aliasId).toBe('string')
-      expect(aliasId.length).toBe(22)
-      expect(extractIdentity(source)).toBe(aliasId)
-      expect(extractIdentity(target)).toBe(aliasId)
+      expect(returnedTarget).toBe(target)
+      expect(typeof extractIdentity(source)).toBe('string')
+      expect(extractIdentity(source).length).toBe(22)
+      expect(extractIdentity(source)).toBe(extractIdentity(target))
     })
   
     it('throws if target already has an identity', () => {
