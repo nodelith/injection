@@ -1,6 +1,6 @@
+import { TargetFactory, TargetConstructor, TargetFactoryWrapper, TargetConstructorWrapper } from './target'
 import { Container, ContainerDeclarationOptions, ContainerResolutionOptions } from './container'
-import { Registration, RegistrationOptions } from './registration'
-import { TargetFactory, TargetConstructor } from './target'
+import { Registration, RegistrationDeclarationOptions } from './registration'
 import { Bundle, BundleDescriptorEntry } from './bundle'
 import { Resolver } from './resolver'
 import { Context } from './context'
@@ -12,7 +12,7 @@ export type ModuleResolutionOptions = ContainerResolutionOptions
 
 export type ModuleRegistrationVisibility = 'private' | 'public'
 
-type ModuleRegistrationOptions = RegistrationOptions & {
+type ModuleRegistrationOptions = RegistrationDeclarationOptions & {
   visibility?: ModuleRegistrationVisibility
 }
 
@@ -33,7 +33,6 @@ class ModuleRegistration<R = any> extends Registration<R> {
   public clone(options?: ModuleRegistrationOptions): Registration<R> {
     return new ModuleRegistration(this.resolver, {
       lifecycle: this.lifecycle,
-      bundle: options?.bundle ?? this.bundle,
       context: options?.context ?? this.context,
       visibility: options?.visibility ?? this.visibility,
     })
@@ -84,16 +83,16 @@ export class Module {
   }
 
   public register<R extends object>(token: Token, options: (
-    ModuleRegistrationOptions & { factory: TargetFactory<R> }
+    ModuleRegistrationOptions & TargetFactoryWrapper<R>
   )): void 
 
   public register<R extends object>(token: Token, options: (
-    ModuleRegistrationOptions & { constructor: TargetConstructor<R> }
+    ModuleRegistrationOptions & TargetConstructorWrapper<R>
   )): void 
 
-  public register(token: Token, options: (
-    | ModuleRegistrationOptions & { factory: TargetFactory }
-    | ModuleRegistrationOptions & { constructor: TargetConstructor }
+  public register<R extends object>(token: Token, options: (
+    | ModuleRegistrationOptions & TargetFactoryWrapper<R>
+    | ModuleRegistrationOptions & TargetConstructorWrapper<R>
   )): void {
     const resolver = Resolver.create(options)
     this.setResolver(token, resolver, options)
