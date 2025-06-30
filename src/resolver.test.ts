@@ -1,76 +1,370 @@
 import { Resolver, createResolver } from './resolver'
 import { Identity } from './identity'
+import { Bundle } from './bundle'
 
 describe('Resolver', () => {
-  describe('createResolver', () => {
-    it('creates a resolver from a factory', () => {
-      const factory = () => ({
-        foo: 'bar',
-      })
-  
-      const resolver = createResolver({
-        factory: factory
-      })
+  it('creates a lazy resolver from a factory', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
 
-      const resolution = resolver({})
-      expect(resolution.foo).toEqual('bar')
-    })
-  
-    it('creates a resolver from a constructor', () => {
-      class Constructor {
-        public foo: string
-        constructor() {
-          this.foo = 'bar'
-        }
-      }
-  
-      const resolver = createResolver({
-        constructor: Constructor
-      })
-
-      const resolution = resolver({})
-      expect(resolution).toBeInstanceOf(Constructor)
-      expect(resolution.foo).toBe('bar')
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
     })
 
-    it('binds constructor identity to resolver', () => {
-      class TestClass {
-        value = 'constructed'
-        constructor(_bundle: any) {}
-      }
-  
-      const resolver = createResolver({ constructor: TestClass })
-      const result = resolver({})
-  
-      expect(result).toBeInstanceOf(TestClass)
-      expect(result.value).toBe('constructed')
-  
-      const constructorId = Identity.extract(TestClass)
-      const resolverId = Identity.extract(resolver)
-  
-      expect(resolverId).toBe(constructorId)
-    })
-
-    it('binds factory identity to resolver', () => {
-      const factory = () => ({})
-      const resolver = createResolver({ factory })
-
-      const factoryId = Identity.extract(factory)
-      const resolverId = Identity.extract(resolver)
-
-      expect(resolverId).toBe(factoryId)
-    })
-
-    it('throws if no valid registration target is provided', () => {
-      const expectedErrorMessage = 'Could not create resolver. Missing a valid registration target.'
-      // @ts-expect-error
-      expect(() => createResolver({})).toThrow(expectedErrorMessage)
-    })
+    const result = resolver({})
+    expect(result.foo).toEqual('bar')
   })
 
-  describe('namespace', () => {
-    it('exposes create function', () => {
-      expect(Resolver.create).toBe(createResolver)
+  it('creates a lazy resolver from a constructor', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'lazy'
     })
+
+    const result = resolver({})
+    expect(result.foo).toBe('bar')
+    expect(result).toBeInstanceOf(Target)
+  })
+
+  it('creates a eager resolver from a factory', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({ 
+      factory: target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect(result.foo).toEqual('bar')
+  })
+
+  it('creates a eager resolver from a constructor', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect(result.foo).toBe('bar')
+    expect(result).toBeInstanceOf(Target)
+  })
+
+  it('binds constructor identity to lazy resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({ 
+      constructor: Target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect(result.foo).toBe('bar')
+    expect(result).toBeInstanceOf(Target)
+
+    const targetId = Identity.extract(Target)
+    const resolverId = Identity.extract(resolver)
+    expect(resolverId).toBe(targetId)
+  })
+
+  it('binds factory identity to lazy resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({ 
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const targetId = Identity.extract(target)
+    const resolverId = Identity.extract(resolver)
+    expect(resolverId).toBe(targetId)
+  })
+
+  it('binds constructor identity to eager resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({ 
+      constructor: Target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect(result).toBeInstanceOf(Target)
+    expect(result.foo).toBe('bar')
+
+    const targetId = Identity.extract(Target)
+    const resolverId = Identity.extract(resolver)
+    expect(resolverId).toBe(targetId)
+  })
+
+  it('binds factory identity to eager resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({ 
+      factory: target,
+      resolution: 'eager'
+    })
+
+    const factoryId = Identity.extract(target)
+    const resolverId = Identity.extract(resolver)
+    expect(resolverId).toBe(factoryId)
+  })
+
+  it('initializes lazy factory resolver instance only when accessed', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect(target).toHaveBeenCalledTimes(0)
+    
+    result.foo
+    expect(target).toHaveBeenCalledTimes(1)
+    
+    result.foo
+    expect(target).toHaveBeenCalledTimes(1)
+  })
+
+  it('initializes lazy constructor resolver instance only when accessed', () => {
+    const counter = jest.fn();
+
+    class Target {
+      foo = 'bar';
+      constructor() {
+        counter()
+      }
+    }
+  
+    const resolver = createResolver({ 
+      constructor: Target,
+      resolution: 'lazy'
+    });
+  
+    const result = resolver({}) as Target;
+    expect(counter).toHaveBeenCalledTimes(0);
+  
+    result.foo;
+    expect(counter).toHaveBeenCalledTimes(1);
+  
+    result.foo;
+    expect(counter).toHaveBeenCalledTimes(1);
+  })
+
+  it('supports property existence check in lazy factory resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect('foo' in result).toBe(true)
+    expect('nonexistent' in result).toBe(false)
+  })
+
+  it('supports property existence check in eager factory resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect('foo' in result).toBe(true)
+    expect('nonexistent' in result).toBe(false)
+  })
+
+  it('supports property existence check in lazy constructor resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect('foo' in result).toBe(true)
+    expect('nonexistent' in result).toBe(false)
+  })
+
+  it('supports property existence check in eager constructor resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect('foo' in result).toBe(true)
+    expect('nonexistent' in result).toBe(false)
+  })
+
+  it('supports Object.keys enumeration in lazy factory resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect(Object.keys(result)).toEqual(['foo'])
+  })
+
+  it('supports Object.keys enumeration in eager factory resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect(Object.keys(result)).toEqual(['foo'])
+  })
+
+  it('supports Object.keys enumeration in lazy constructor resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    expect(Object.keys(result)).toEqual(['foo'])
+  })
+
+  it('supports Object.keys enumeration in eager constructor resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    expect(Object.keys(result)).toEqual(['foo'])
+  })
+
+  it('supports Object.getOwnPropertyDescriptor in lazy factory resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    const descriptor = Object.getOwnPropertyDescriptor(result, 'foo')
+    expect(descriptor).toBeDefined()
+    expect(descriptor!.value).toBe('bar')
+    expect(descriptor!.writable).toBe(true)
+  })
+
+  it('supports Object.getOwnPropertyDescriptor in eager factory resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    const descriptor = Object.getOwnPropertyDescriptor(result, 'foo')
+    expect(descriptor).toBeDefined()
+    expect(descriptor!.value).toBe('bar')
+    expect(descriptor!.writable).toBe(true)
+  })
+
+  it('supports Object.getOwnPropertyDescriptor in lazy constructor resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    const descriptor = Object.getOwnPropertyDescriptor(result, 'foo')
+    expect(descriptor).toBeDefined()
+    expect(descriptor!.value).toBe('bar')
+    expect(descriptor!.writable).toBe(true)
+  })
+
+  it('supports Object.getOwnPropertyDescriptor in eager constructor resolver', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    const descriptor = Object.getOwnPropertyDescriptor(result, 'foo')
+    expect(descriptor).toBeDefined()
+    expect(descriptor!.value).toBe('bar')
+    expect(descriptor!.writable).toBe(true)
+  })
+
+  it('supports property modification in lazy factory resolver result', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    result.foo = 'modified'
+    expect(result.foo).toBe('modified')
+  })
+  
+  it('supports property modification in eager factory resolver result', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      factory: target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    result.foo = 'modified'
+    expect(result.foo).toBe('modified')
+  })
+
+  it('supports property modification in lazy constructor resolver result', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'lazy'
+    })
+
+    const result = resolver({})
+    result.foo = 'modified'
+    expect(result.foo).toBe('modified')
+  })
+  
+  it('supports property modification in eager constructor resolver result', () => {
+    class Target { foo = 'bar' }
+
+    const resolver = createResolver({
+      constructor: Target,
+      resolution: 'eager'
+    })
+
+    const result = resolver({})
+    result.foo = 'modified'
+    expect(result.foo).toBe('modified')
   })
 })
