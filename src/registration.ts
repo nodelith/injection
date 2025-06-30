@@ -18,31 +18,31 @@ export type RegistrationResolutionOptions = {
   lifecycle?: RegistrationLifecycle,
 }
 
-export class Registration<R = any> {
-  public static create<T>(resolver: Resolver<T>, options?: RegistrationDeclarationOptions): Registration<T> {
+export class Registration<T extends object = any> {
+  public static create<T extends object = any>(resolver: Resolver<T>, options?: RegistrationDeclarationOptions): Registration<T> {
     return new Registration<T>(resolver, options)
   }
 
-  protected readonly resolver: Resolver<R>
+  protected readonly resolver: Resolver<T>
 
   protected readonly context: Context
 
   public readonly lifecycle: RegistrationLifecycle
 
-  protected constructor(resolver: Resolver<R>, options?: RegistrationDeclarationOptions) {
+  protected constructor(resolver: Resolver<T>, options?: RegistrationDeclarationOptions) {
     this.resolver = resolver
     this.context = options?.context ?? Context.create()
     this.lifecycle = options?.lifecycle ?? 'singleton'
   }
 
-  public clone(options?: RegistrationDeclarationOptions): Registration<R> {
+  public clone(options?: RegistrationDeclarationOptions): Registration<T> {
     return new Registration(this.resolver, {
       lifecycle: this.lifecycle,
       context: options?.context ?? this.context,
     })
   }
   
-  public resolve(options?: RegistrationResolutionOptions): R {
+  public resolve(options?: RegistrationResolutionOptions): T {
     const lifecycle = options?.lifecycle ?? this.lifecycle
 
     if(lifecycle === 'transient') {

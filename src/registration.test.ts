@@ -83,11 +83,9 @@ describe('Registration', () => {
         lifecycle: 'singleton',
       })
 
-      const bundle = { x: 1 }
       const context = Context.create()
 
       const registrationClone = registration.clone({ 
-        bundle,
         context,
       })
 
