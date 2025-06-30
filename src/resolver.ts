@@ -78,13 +78,23 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
   const resolution = options.resolution ?? 'eager'
 
   if('static' in options) {
+    if(resolution !== 'eager') {
+      throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for static target.`)
+    }
+
     return (_bundle: Bundle) => {
       return options.static as TargetStatic<T>
     }
   }
 
   if('function' in options) {
-    throw new Error('Not Implemented')
+    if(resolution !== 'eager') {
+      throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for function target.`)
+    }
+
+    return Identity.bind(options.function, (bundle: Bundle) => {
+      return (options.function as TargetFunction<T>)(bundle)
+    })
   }
 
   if('factory' in options && resolution === 'eager') {

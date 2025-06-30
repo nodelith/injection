@@ -112,6 +112,18 @@ describe('Resolver', () => {
     expect(resolverId).toBe(factoryId)
   })
 
+  it('binds function identity to resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      function: target
+    })
+
+    const targetId = Identity.extract(target)
+    const resolverId = Identity.extract(resolver)
+    expect(resolverId).toBe(targetId)
+  })
+
   it('initializes lazy factory resolver instance only when accessed', () => {
     const target = jest.fn(() => ({ foo: 'bar' }))
 
@@ -367,7 +379,7 @@ describe('Resolver', () => {
     expect(result.foo).toBe('modified')
   })
 
-  it('creates resolvers for object static values', () => {
+  it('create resolvers for static object values', () => {
     const staticValue = { foo: 'bar', baz: 123 }
 
     const resolver = createResolver<typeof staticValue>({
@@ -380,7 +392,23 @@ describe('Resolver', () => {
     expect(result.baz).toBe(123)
   })
 
-  it('creates resolvers for primitive static value', () => {
+  it('create resolvers for functions returning object values', () => {
+    const target = jest.fn((bundle) => ({ foo: 'bar', ...bundle }))
+
+    const resolver = createResolver({
+      function: target
+    })
+
+    const bundle = { fizz: 'buzz' }
+    const result = resolver(bundle)
+    
+    expect(target).toHaveBeenCalledWith(bundle)
+
+    expect(result.foo).toBe('bar')
+    expect(result.fizz).toBe('buzz')
+  })
+
+  it('create resolvers for static primitive values', () => {
     const staticValue = 'hello world'
 
     const resolver = createResolver<string>({
@@ -392,7 +420,21 @@ describe('Resolver', () => {
     expect(typeof result).toBe('string')
   })
 
-  it('creates resolvers for null static value', () => {
+  it('create resolvers for functions returning primitive values', () => {
+    const target = jest.fn((bundle) => `processed: ${bundle.fizz}`)
+
+    const resolver = createResolver({
+      function: target
+    })
+
+    const bundle = { fizz: 'buzz' }
+    const result = resolver(bundle)
+    
+    expect(target).toHaveBeenCalledWith(bundle)
+    expect(result).toBe('processed: buzz')
+  })
+
+  it('create resolvers for static null values', () => {
     const resolver = createResolver<null>({
       static: null
     })
@@ -401,8 +443,20 @@ describe('Resolver', () => {
     expect(result).toBe(null)
   })
 
+  it('create resolvers for functions returning null values', () => {
+    const target = jest.fn(() => null)
 
-  it('creates resolvers for undefined static value', () => {
+    const resolver = createResolver({
+      function: target
+    })
+
+    const result = resolver({})
+    
+    expect(target).toHaveBeenCalledWith({})
+    expect(result).toBe(null)
+  })
+
+  it('create resolvers for static undefined values', () => {
     const resolver = createResolver<undefined>({
       static: undefined
     })
@@ -411,16 +465,63 @@ describe('Resolver', () => {
     expect(result).toBe(undefined)
   })
 
-  it('ignores resolution option for static resolver', () => {
-    const staticValue = { foo: 'bar' }
+  it('create resolvers for functions returning undefined values', () => {
+    const target = jest.fn(() => undefined)
 
-    const resolver = createResolver<typeof staticValue>({
-      // @ts-expect-error
-      static: staticValue,
-      resolution: 'lazy'
+    const resolver = createResolver({
+      function: target
     })
 
     const result = resolver({})
-    expect(result).toBe(staticValue)
+    
+    expect(target).toHaveBeenCalledWith({})
+    expect(result).toBe(undefined)
+  })
+
+  it('uses eager resolution for static resolver', () => {
+    const target = { foo: 'bar' }
+
+    const resolver = createResolver({
+      static: target,
+    })
+
+    const result = resolver({})
+    expect(result).toBe(target)
+  })
+
+  it('uses eager resolution for function resolver', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    const resolver = createResolver({
+      function: target,
+    })
+
+    const result = resolver({})
+    expect(target).toHaveBeenCalledWith({})
+    expect(result.foo).toBe('bar')
+  })
+
+  it('throws error for static resolver with lazy resolution', () => {
+    const target = { foo: 'bar' }
+
+    expect(() => {
+      createResolver({
+        static: target,
+        // @ts-expect-error
+        resolution: 'super_lazy'
+      })
+    }).toThrow(`Could not create resolver. Invalid "super_lazy" resolution option for static target.`)
+  })
+
+  it('throws error for function resolver with lazy resolution', () => {
+    const target = jest.fn(() => ({ foo: 'bar' }))
+
+    expect(() => {
+      createResolver({
+        function: target,
+        // @ts-expect-error
+        resolution: 'super_lazy'
+      })
+    }).toThrow(`Could not create resolver. Invalid "super_lazy" resolution option for function target.`)
   })
 })
