@@ -1,131 +1,362 @@
 import { Registration } from './registration'
 import { Container } from './container'
+import { Resolver } from './resolver'
 import { Context } from './context'
+import { Bundle } from './bundle'
 import { Token } from './token'
+import { randomUUID } from 'crypto'
 
 describe('Container (integration)', () => {
-  const token_a: Token = 'a'
-  const token_b: Token = 'b'
-  const token_c: Token = 'c'
-
-  const value = <T>(val: T): (() => T) => () => val
-
-  const sum = (a: Token, b: Token) => (bundle: Record<Token, any>) => bundle[a] + bundle[b]
-
-  it('returns the registration for a known token', () => {
+  it('should resolve value by token', () => {
     const container = Container.create()
-    const token = 'known'
 
-    container.register(token, Registration.create(() => {}))
-    expect(container.get(token)).toBeInstanceOf(Registration)
+    const token = container.register('token', Registration.create({
+      function: () => 'value'
+    }))
+
+    const result = container.resolve(token)
+    expect(result).toBe('value')
   })
 
-  it('returns undefined for an unknown token', () => {
+  it('should resolve a singleton object registration', () => {
     const container = Container.create()
-    const token = 'unknown'
 
-    expect(container.get(token)).toBeUndefined()
-  })
-
-  it('registers and resolves a singleton value', () => {
-    const container = Container.create()
-    container.register(token_a, Registration.create(value(123)))
-
-    const result = container.resolve(token_a)
-    expect(result).toBe(123)
-  })
-
-  it('registers and resolves a dependent resolver via bundle injection', () => {
-    const container = Container.create()
-    container.register(token_a, Registration.create(value(2)))
-    container.register(token_b, Registration.create(value(3)))
-    container.register(token_c, Registration.create(sum(token_a, token_b)))
-
-    const result = container.resolve(token_c)
-    expect(result).toBe(5)
-  })
-
-  it('reuses instance from context for singleton lifecycle', () => {
-    const context = Context.create()
-
-    const spy = jest.spyOn(context, 'resolve')
-  
-    const container = Container.create({ context })
-  
-    container.register(token_a, Registration.create(() => ({}), {
-      context,
+    const token = container.register('token', Registration.create({
+      factory: () => ({ value: 123}),
       lifecycle: 'singleton',
+    }))
+
+    const result = container.resolve(token)
+    expect(result.value).toBe(123)
+  })
+
+  it('should resolve a transient object registration', () => {
+    const container = Container.create()
+
+    const token = container.register('token', Registration.create({
+      factory: () => ({ value: 123}),
+      lifecycle: 'transient',
+    }))
+
+    const result = container.resolve(token)
+    expect(result.value).toBe(123)
+  })
+
+  it('should resolve a scoped object registration', () => {
+    const context = Context.create()
+    const container = Container.create()
+
+    const token = container.register('token', Registration.create({
+      factory: () => ({ value: 123}),
+      lifecycle: 'scoped',
+    }))
+
+    const result = container.resolve(token, { context })
+    expect(result.value).toBe(123)
+  })
+
+  it('should resolve scoped object registration using context', () => {
+    const context = Context.create()
+    const container = Container.create()
+    
+    const spy = jest.spyOn(context, 'resolve')
+
+    const token = container.register('token', Registration.create({
+      factory: () => ({ value: 123 }),
+      lifecycle: 'scoped'
     }))
   
     expect(spy).not.toHaveBeenCalled()
 
-    const resolution_0 = container.resolve(token_a)
+    const resolution_0 = container.resolve(token, { context })
     expect(spy).toHaveBeenCalledTimes(1)
 
-    const resolution_1 = container.resolve(token_a)
+    const resolution_1 = container.resolve(token, { context })
     expect(spy).toHaveBeenCalledTimes(2)
     
     expect(resolution_0).toBe(resolution_1)
   })
 
-  it('creates a new instance for transient lifecycle', () => {
+  it('should resolve singleton object registration using context', () => {
+    const context = Context.create()
+    const container = Container.create({ context })
+    
+    const spy = jest.spyOn(context, 'resolve')
+
+    const token = container.register('token', Registration.create({
+      factory: () => ({ value: 123 }),
+      lifecycle: 'singleton'
+    }))
+  
+    expect(spy).not.toHaveBeenCalled()
+
+    const resolution_0 = container.resolve(token)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    const resolution_1 = container.resolve(token)
+    expect(spy).toHaveBeenCalledTimes(2)
+    
+    expect(resolution_0).toBe(resolution_1)
+  })
+
+  it('should resolve transient object registration creating new instance', () => {
+    const context = Context.create()
     const container = Container.create()
+  
+    const token = container.register('token', Registration.create({
+      function: () => randomUUID(),
+      lifecycle: 'transient',
+    }))
 
-    container.register(token_a, Registration.create(() => ({}), { lifecycle: 'transient' }))
-
-    const resolution_0 = container.resolve(token_a)
-    const resolution_1 = container.resolve(token_a)
-
+    const resolution_0 = container.resolve(token, { context })
+    const resolution_1 = container.resolve(token, { context })
     expect(resolution_0).not.toBe(resolution_1)
   })
 
-  it('injects internal registrations', () => {
+  it('should resolve acyclic dependency when bundle is left untouched', () => {
     const container = Container.create()
 
-    container.register(token_a, Registration.create((bundle) => {
-      return `${bundle[token_b]}-${bundle[token_c]}`
-    }))
-
-    container.register(token_b, Registration.create(() => 'prefix'))
-    container.register(token_c, Registration.create(() => 'suffix'))
-
-    const resolution = container.resolve(token_a, {
-      bundle: { [token_b]: 'suffix' },
+    const target_0 = () => ({
+      call: () => 'calledTarget0'
+    })
+  
+    const target_1 = (bundle: Bundle) => ({ 
+      call: () => 'calledTarget1',
+      callTarget0: () => bundle.target0?.call(),
     })
 
-    expect(resolution).toBe('prefix-suffix')
+    const target_2  = (bundle: Bundle) => ({ 
+      call: () => 'calledTarget2',
+      callTarget0: () => bundle.target0?.call(),
+      callTarget1: () => bundle.target1?.call(),
+    })
+
+    const targetToken_0 = container.register('target0', Registration.create({ factory: target_0 }))
+    const targetToken_1 = container.register('target1', Registration.create({ factory: target_1 }))
+    const targetToken_2 = container.register('target2', Registration.create({ factory: target_2 }))
+
+    expect((container.resolve(targetToken_0).call())).toBe('calledTarget0')
+    expect((container.resolve(targetToken_1).call())).toBe('calledTarget1')
+    expect((container.resolve(targetToken_2).call())).toBe('calledTarget2')
+
+    expect((container.resolve(targetToken_1).callTarget0())).toBe('calledTarget0')
+    expect((container.resolve(targetToken_2).callTarget0())).toBe('calledTarget0')
+
+    expect((container.resolve(targetToken_2).callTarget1())).toBe('calledTarget1')
   })
 
-  it('injects registrations from external bundle', () => {
+  it('should resolve acyclic dependency when not destructuring bundle', () => {
     const container = Container.create()
 
-    container.register(token_a, Registration.create((bundle) => {
-      return `${bundle[token_b]}-${bundle[token_c]}`
-    }))
-
-    const resolution = container.resolve(token_a, {
-      bundle: { 
-        [token_b]: 'prefix',
-        [token_c]: 'suffix',
-      },
+    const target_0 = () => ({
+      call: () => 'calledTarget0'
     })
+  
+    const target_1 = (bundle: Bundle) => {
+      const target0 = bundle.target0
+      return { 
+        call: () => 'calledTarget1',
+        callTarget0: () => target0?.call(),
+      }
+    }
 
-    expect(resolution).toBe('prefix-suffix')
+    const target_2  = (bundle: Bundle) => {
+      const target0 = bundle.target0
+      const target1 = bundle.target1
+      return { 
+        call: () => 'calledTarget2',
+        callTarget0: () => target0?.call(),
+        callTarget1: () => target1?.call(),
+      }
+    }
+
+    const targetToken_0 = container.register('target0', Registration.create({ factory: target_0 }))
+    const targetToken_1 = container.register('target1', Registration.create({ factory: target_1 }))
+    const targetToken_2 = container.register('target2', Registration.create({ factory: target_2 }))
+
+    expect((container.resolve(targetToken_0).call())).toBe('calledTarget0')
+    expect((container.resolve(targetToken_1).call())).toBe('calledTarget1')
+    expect((container.resolve(targetToken_2).call())).toBe('calledTarget2')
+
+    expect((container.resolve(targetToken_1).callTarget0())).toBe('calledTarget0')
+    expect((container.resolve(targetToken_2).callTarget0())).toBe('calledTarget0')
+
+    expect((container.resolve(targetToken_2).callTarget1())).toBe('calledTarget1')
   })
 
-  it('resolves with injected external bundle', () => {
+  it('should resolve acyclic dependency graph when destructuring bundle', () => {
     const container = Container.create()
 
-    container.register(token_a, Registration.create((bundle) => 'prefix-' + bundle[token_b]))
-
-    const result = container.resolve(token_a, {
-      bundle: { [token_b]: 'suffix' },
+    const target_0 = () => ({
+      call: () => 'calledTarget0'
     })
+  
+    const target_1 = ({ target0 }: Bundle) => ({ 
+      call: () => 'calledTarget1',
+      callTarget0: () => target0?.call(),
+    })
+
+    const target_2  = ({ target0, target1 }: Bundle) => ({ 
+      call: () => 'calledTarget2',
+      callTarget0: () => target0?.call(),
+      callTarget1: () => target1?.call(),
+    })
+
+    const targetToken_0 = container.register('target0', Registration.create({ factory: target_0 }))
+    const targetToken_1 = container.register('target1', Registration.create({ factory: target_1 }))
+    const targetToken_2 = container.register('target2', Registration.create({ factory: target_2 }))
+
+    expect((container.resolve(targetToken_0).call())).toBe('calledTarget0')
+    expect((container.resolve(targetToken_1).call())).toBe('calledTarget1')
+    expect((container.resolve(targetToken_2).call())).toBe('calledTarget2')
+
+    expect((container.resolve(targetToken_1).callTarget0())).toBe('calledTarget0')
+    expect((container.resolve(targetToken_2).callTarget0())).toBe('calledTarget0')
+
+    expect((container.resolve(targetToken_2).callTarget1())).toBe('calledTarget1')
+  })
+
+  it('should resolve cyclic dependency graph when bundle is left untouched', () => {
+    const container = Container.create()
+
+    const target_0 = (bundle: Bundle) => ({
+      call: () => 'calledTarget0',
+      callDependency: () => bundle.target1?.call(),
+    })
+
+    const target_1 = (bundle: Bundle) => ({
+      call: () => 'calledTarget1',
+      callDependency: () => bundle.target0?.call(),
+    })
+
+    const resolver_0 = Resolver.create({
+      factory: target_0,
+      resolution: 'lazy',
+    })
+
+    const resolver_1 = Resolver.create({
+      factory: target_1,
+      resolution: 'lazy',
+    })
+
+    const targetToken_0 = container.register('target0', Registration.create({ factory: resolver_0 }))
+    const targetToken_1 = container.register('target1', Registration.create({ factory: resolver_1 }))
+
+    expect((container.resolve(targetToken_0) as any).call()).toBe('calledTarget0')
+    expect((container.resolve(targetToken_1) as any).call()).toBe('calledTarget1')
+
+    expect((container.resolve(targetToken_0) as any).callDependency()).toBe('calledTarget1')
+    expect((container.resolve(targetToken_1) as any).callDependency()).toBe('calledTarget0')
+  })
+
+  it('should resolve cyclic dependency graph when not destructuring bundle', () => {
+    const container = Container.create()
+
+    const target_0 = (bundle: Bundle) => {
+      const target1 = bundle.target1
+      return {
+        call: () => 'calledTarget_0',
+        callDependency: () => target1.call(),
+      }
+    }
+
+    const target_1 = (bundle: Bundle) => {
+      const target_0 = bundle.target0
+      return {
+        call: () => 'calledTarget_1',
+        callDependency: () => target_0.call(),
+      }
+    }
+
+    const resolver_0 = Resolver.create({
+      factory: target_0,
+      resolution: 'lazy',
+    })
+
+    const resolver_1 = Resolver.create({
+      factory: target_1,
+      resolution: 'lazy',
+    })
+
+    const targetToken_0 = container.register('target0', Registration.create({ factory: resolver_0 }))
+    const targetToken_1 = container.register('target1', Registration.create({ factory: resolver_1 }))
+
+    expect((container.resolve(targetToken_0)).call()).toBe('calledTarget_0')
+    expect((container.resolve(targetToken_1)).call()).toBe('calledTarget_1')
+
+    expect((container.resolve(targetToken_0)).callDependency()).toBe('calledTarget_1')
+    expect((container.resolve(targetToken_1)).callDependency()).toBe('calledTarget_0')
+  })
+
+  it('should resolve cyclic dependency graph when destructuring bundle', () => {
+    const container = Container.create()
+
+    const target_0 = ({ target1 }: Bundle) => ({
+      call: () => 'calledTarget_0',
+      callDependency: () => target1.call(),
+    })
+
+    const target_1 = ({ target0 }: Bundle) => ({
+      call: () => 'calledTarget_1',
+      callDependency: () => target0.call(),
+    })
+
+    const resolver_0 = Resolver.create({
+      factory: target_0,
+      resolution: 'lazy',
+    })
+
+    const resolver_1 = Resolver.create({
+      factory: target_1,
+      resolution: 'lazy',
+    })
+
+    const targetToken_0 = container.register('target0', Registration.create({ factory: resolver_0 }))
+    const targetToken_1 = container.register('target1', Registration.create({ factory: resolver_1 }))
+
+    expect((container.resolve(targetToken_0)).call()).toBe('calledTarget_0')
+    expect((container.resolve(targetToken_1)).call()).toBe('calledTarget_1')
+
+    expect((container.resolve(targetToken_0)).callDependency()).toBe('calledTarget_1')
+    expect((container.resolve(targetToken_1)).callDependency()).toBe('calledTarget_0')
+  })
+
+  it('should inject internal registrations', () => {
+    const container = Container.create()
+
+    const token_a = container.register('token', Registration.create({
+      function: (bundle) => `${bundle[token_b]}-${bundle[token_c]}`
+    }))
+
+    const token_b = container.register('token_b', Registration.create({
+      static: 'prefix'
+    }))
+
+    const token_c = container.register('token_x', Registration.create({
+      static: 'suffix'
+    }))
+
+    const result = container.resolve(token_a)
 
     expect(result).toBe('prefix-suffix')
   })
 
-  it('uses passed resolution context when resolving scoped lifecycle', () => {
+  it('should inject registrations from external bundle', () => {
+    const container = Container.create()
+
+    const token_a = container.register('token', Registration.create({
+      function: (bundle) => `${bundle.token_a}-${bundle.token_b}`
+    }))
+
+    const result = container.resolve(token_a, { bundle: {
+      token_a: 'prefix',
+      token_b: 'suffix',
+    }})
+
+    expect(result).toBe('prefix-suffix')
+  })
+
+  it('should use given resolution context to resolve scoped lifecycle', () => {
     const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
 
     const rootContext = Context.create()
@@ -138,7 +369,8 @@ describe('Container (integration)', () => {
 
     const container = Container.create({ context: rootContext })
   
-    container.register(token_a, Registration.create(resolverMock, {
+    const token = container.register('token_a', Registration.create({
+      function: resolverMock,
       lifecycle: 'scoped'
     }))
 
@@ -146,12 +378,12 @@ describe('Container (integration)', () => {
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
     expect(resolverMock).toHaveBeenCalledTimes(0)
   
-    const result_0 = container.resolve(token_a, { context: resolutionContext })
+    const result_0 = container.resolve(token, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(1)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
     expect(resolverMock).toHaveBeenCalledTimes(1)
 
-    const result_1 = container.resolve(token_a, { context: resolutionContext })
+    const result_1 = container.resolve(token, { context: resolutionContext })
     expect(resolutionContextSpy).toHaveBeenCalledTimes(2)
     expect(rootContextSpy).toHaveBeenCalledTimes(0)
     expect(resolverMock).toHaveBeenCalledTimes(1)
@@ -160,145 +392,65 @@ describe('Container (integration)', () => {
     expect(result_0).toBe(result_1)
   })
 
-  it('uses new resolution context when resolving scoped lifecycle', () => {
-    const resolverMock = jest.fn(() => ({ value: 'scoped-value' }))
-
-    const rootContext = Context.create()
-
-    const rootContextSpy = jest.spyOn(rootContext, 'resolve')
-    const container = Container.create({ context: rootContext })
-  
-    container.register(token_a, Registration.create(resolverMock, {
-      lifecycle: 'scoped'
-    }))
-
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(0)
-  
-    const result_0 = container.resolve(token_a)
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(1)
-
-    const result_1 = container.resolve(token_a)
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(2)
-  
-    expect(result_0).toEqual({ value: 'scoped-value' })
-    expect(result_0).not.toBe(result_1)
-    expect(result_0).toEqual(result_1)
-  })
-
-  it('uses root context when resolving singleton lifecycle', () => {
-    const resolverMock = jest.fn(() => ({ value: 'singleton-value' }))
-
-    const rootContext = Context.create()
-
-    const rootContextSpy = jest.spyOn(rootContext, 'resolve')
-
-    const resolutionContext = Context.create()
-
-    const resolutionContextSpy = jest.spyOn(resolutionContext, 'resolve')
-
-    const container = Container.create({ context: rootContext })
-  
-    container.register(token_a, Registration.create(resolverMock, {
-      lifecycle: 'singleton'
-    }))
-
-    expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(0)
-  
-    const result_0 = container.resolve(token_a, { context: resolutionContext })
-    expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
-    expect(rootContextSpy).toHaveBeenCalledTimes(1)
-    expect(resolverMock).toHaveBeenCalledTimes(1)
-
-    const result_1 = container.resolve(token_a, { context: resolutionContext })
-    expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
-    expect(rootContextSpy).toHaveBeenCalledTimes(2)
-    expect(resolverMock).toHaveBeenCalledTimes(1)
-  
-    expect(result_0).toEqual({ value: 'singleton-value' })
-    expect(result_0).toBe(result_1)
-  })
-
-  it('ignores contexts when resolving transient lifecycle', () => {
-    const resolverMock = jest.fn(() => ({ value: 'transient-value' }))
-
-    const rootContext = Context.create()
-
-    const rootContextSpy = jest.spyOn(rootContext, 'resolve')
-
-    const resolutionContext = Context.create()
-
-    const resolutionContextSpy = jest.spyOn(resolutionContext, 'resolve')
-
-    const container = Container.create({ context: rootContext })
-  
-    container.register(token_a, Registration.create(resolverMock, {
-      lifecycle: 'transient'
-    }))
-
-    expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(0)
-  
-    const result_0 = container.resolve(token_a, { context: resolutionContext })
-    expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(1)
-
-    const result_1 = container.resolve(token_a, { context: resolutionContext })
-    expect(resolutionContextSpy).toHaveBeenCalledTimes(0)
-    expect(rootContextSpy).toHaveBeenCalledTimes(0)
-    expect(resolverMock).toHaveBeenCalledTimes(2)
-  
-    expect(result_0).toEqual({ value: 'transient-value' })
-    expect(result_0).not.toBe(result_1)
-  })
-
-  it('returns entries and registration list correctly', () => {
+  it('should return false for unknown registration tokens', () => {
     const container = Container.create()
-    const registration = Registration.create(value('foo'))
-
-    const token = container.register(token_a, registration)
- 
-    expect(container.entries).toEqual([[token_a, expect.any(Registration)]])
-    expect(container.registrations).toEqual([registration])
+    expect(container.has('token_a')).toBe(false)
   })
 
-  it('clones the container and maintains resolution', () => {
+  it('should return true for known registration tokens', () => {
     const container = Container.create()
-    container.register(token_a, Registration.create(value('x')))
+
+    const token = container.register('token_a', Registration.create({
+      factory: () => ({})
+    }))
+
+    expect(container.has(token)).toBe(true)
+  })
+
+  it('should return false for unkown registration tokens on the cloned container', () => {
+    const container = Container.create()
+    const clone = container.clone()
+    expect(clone.has('token_a')).toBe(false)
+  })
+
+  it('should return true for known registration tokens on the cloned container', () => {
+    const container = Container.create()
+
+    const token = container.register('token_a', Registration.create({
+      factory: () => ({})
+    }))
+
+    const clone = container.clone()
+    expect(clone.has(token)).toBe(true)
+  })
+
+  it('should resolve token from registrations added to source container ', () => {
+    const container = Container.create()
+
+    const token = container.register('token_a', Registration.create({
+      static: 123
+    }))
 
     const cloned = container.clone()
 
     expect(cloned).not.toBe(container)
-    expect(cloned.resolve(token_a)).toBe('x')
+    expect(cloned.resolve(token)).toBe(123)
   })
 
-  it('returns false for unknown tokens', () => {
-    const container = Container.create()
-    expect(container.has(token_a)).toBe(false)
-  })
+  // HERE ON
 
-  it('returns true for registered tokens', () => {
-    const container = Container.create()
-    container.register(token_a, Registration.create(() => ({})))
-    expect(container.has(token_a)).toBe(true)
-  })
 
-  it('returns false after cloning if token was not registered', () => {
-    const container = Container.create()
-    const clone = container.clone()
-    expect(clone.has(token_a)).toBe(false)
-  })
 
-  it('returns true in cloned container for copied registrations', () => {
+  it('should return entries and registration list', () => {
     const container = Container.create()
-    container.register(token_a, Registration.create(() => ({})))
-    const clone = container.clone()
-    expect(clone.has(token_a)).toBe(true)
+
+    const registration = Registration.create({
+      function: () => 123
+    })
+
+    const token = container.register('token_a', registration)
+ 
+    expect(container.entries).toEqual([[token, expect.any(Registration)]])
+    expect(container.registrations).toEqual([registration])
   })
 })

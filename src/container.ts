@@ -17,7 +17,7 @@ export class Container<R extends Registration = Registration> {
     return new Container(options)
   }
   
-  private readonly context: Context
+  private readonly context: Context 
 
   private readonly registry: Map<Token, R>
 
@@ -68,7 +68,7 @@ export class Container<R extends Registration = Registration> {
     return resolution
   }
 
-  public register<T>(token: Token<T>, registration: R & Registration<T>): BrandedToken<T> {
+  public register<T extends any>(token: Token<T>, registration: R & Registration<T>): BrandedToken<T> {
     this.registry.set(token, registration.clone({
       context: this.context,
     }) as R & Registration<T>)
