@@ -11,19 +11,21 @@ import {
 import { Identity } from './identity'
 import { Bundle } from './bundle'
 
+export type ResolutionStrategy = 'eager' | 'lazy' 
+
 export type Resolver<T = any> = (bundle: Bundle) => T
 
 export type ResolverConstructorOptions<T extends object = any> =
-  (TargetConstructorWrapper<T> & { resolution?: 'lazy' | 'eager' })
+  (TargetConstructorWrapper<T> & { resolution?: ResolutionStrategy })
 
 export type ResolverFactoryOptions<T extends object = any> =
-  (TargetFactoryWrapper<T> & { resolution?: 'lazy' | 'eager' })
+  (TargetFactoryWrapper<T> & { resolution?: ResolutionStrategy })
 
 export type ResolverFunctionOptions<T extends any = any> = 
-  (TargetFunctionWrapper<T> & { resolution?: 'eager' })
+  (TargetFunctionWrapper<T> & { resolution?: ResolutionStrategy & 'lazy' })
 
 export type ResolverStaticOptions<T extends any = any> = 
-  (TargetStaticWrapper<T> & { resolution?: 'eager' })
+  (TargetStaticWrapper<T> & { resolution?: ResolutionStrategy & 'lazy' })
 
 export type ResolverObjectOptions<T extends object = any> =
   | ResolverConstructorOptions<T>
@@ -36,7 +38,6 @@ export type ResolverValueOptions<T extends any = any> =
 export type ResolverOptions<T extends any> = T extends object 
   ? ResolverObjectOptions<T> | ResolverValueOptions<T>
     : ResolverValueOptions<T>
-
 
 export function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: object): Resolver<T> {
   const resolution: { instance?: T } = { }
