@@ -135,7 +135,7 @@ describe('Module', () => {
 
       // @ts-expect-error
       expect(() => module.register(token, { lifecycle: 'transient' })).toThrow(
-        "Could not create resolver. Missing a valid registration target."
+        "Could not create resolver. Invalid registration options."
       )
     })
   })

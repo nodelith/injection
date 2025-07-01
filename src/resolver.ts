@@ -78,7 +78,7 @@ export function createProxy<T extends object = any>(resolver: Resolver<T>, proto
 export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T> {
   const resolution = options.resolution ?? 'eager'
 
-  if('static' in options) {
+  if(Object.prototype.hasOwnProperty.call(options, 'static') && 'static' in options ) {
     if(resolution !== 'eager') {
       throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for static target.`)
     }
@@ -88,7 +88,8 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
     }
   }
 
-  if('function' in options) {
+
+  if(Object.prototype.hasOwnProperty.call(options, 'function') && 'function' in options ) {
     if(resolution !== 'eager') {
       throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for function target.`)
     }
@@ -98,25 +99,25 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
     })
   }
 
-  if('factory' in options && resolution === 'eager') {
+  if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'eager') {
     return Identity.bind(options.factory, (bundle: Bundle) => {
       return (options.factory as TargetFactory<T & object>)(bundle)
     })
   }
 
-  if('factory' in options && resolution === 'lazy') {
+  if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'lazy') {
     return createProxy(Identity.bind(options.factory, (bundle: Bundle) => {
       return (options.factory as TargetFactory<T & object>)(bundle)
     }))
   }
 
-  if('constructor' in options && resolution === 'eager') {
+  if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'eager') {
     return Identity.bind(options.constructor, (bundle: Bundle) => {
       return new (options.constructor as TargetConstructor<T & object>)(bundle)
     })
   }
 
-  if('constructor' in options && resolution === 'lazy') {
+  if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'lazy') {
     return createProxy(Identity.bind(options.constructor, (bundle: Bundle) => {
       return new (options.constructor as TargetConstructor<T & object>)(bundle) 
     }), options.constructor.prototype)

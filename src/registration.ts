@@ -7,7 +7,7 @@ type RegistrationLifecycle =
   | 'transient' // Will always return a new instance of the registration
   | 'singleton' // Will return an instance from the root context if one exist
 
-export type RegistrationDeclarationOptions<T = any> = {
+export type RegistrationDeclarationOptions = {
   context?: Context | undefined,
   lifecycle?: RegistrationLifecycle,
 }

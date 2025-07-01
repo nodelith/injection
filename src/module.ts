@@ -1,8 +1,8 @@
-import { TargetFactory, TargetConstructor, TargetFactoryWrapper, TargetConstructorWrapper } from './target'
+import { ResolverConstructorOptions, ResolverFactoryOptions, Resolver, ResolverOptions } from './resolver'
 import { Container, ContainerDeclarationOptions, ContainerResolutionOptions } from './container'
 import { Registration, RegistrationDeclarationOptions } from './registration'
+import { TargetConstructor, TargetFactory } from './target'
 import { Bundle, BundleDescriptorEntry } from './bundle'
-import { Resolver } from './resolver'
 import { Context } from './context'
 import { Token } from './token'
 
@@ -16,21 +16,22 @@ type ModuleRegistrationOptions = RegistrationDeclarationOptions & {
   visibility?: ModuleRegistrationVisibility
 }
 
-class ModuleRegistration<R = any> extends Registration<R> {
+class ModuleRegistration<T = any> extends Registration<T> {
   private static DEFAULT_VISIBILITY: ModuleRegistrationVisibility = 'public'
 
-  public static create<R>(resolver: Resolver<R>, options?: ModuleRegistrationOptions) {
+  public static create<T = any>(options: ModuleRegistrationOptions & ResolverOptions<T>) {
+    const resolver = Resolver.create(options)
     return new ModuleRegistration(resolver, options)
   }
 
   public readonly visibility: ModuleRegistrationVisibility
   
-  protected constructor(resolver: Resolver<R>, options?: ModuleRegistrationOptions) {
+  protected constructor(resolver: Resolver<T>, options?: ModuleRegistrationOptions) {
     super(resolver, options)
     this.visibility = options?.visibility ?? ModuleRegistration.DEFAULT_VISIBILITY
   }
 
-  public clone(options?: ModuleRegistrationOptions): Registration<R> {
+  public clone(options?: ModuleRegistrationOptions): Registration<T> {
     return new ModuleRegistration(this.resolver, {
       lifecycle: this.lifecycle,
       context: options?.context ?? this.context,
@@ -83,37 +84,31 @@ export class Module {
   }
 
   public register<R extends object>(token: Token, options: (
-    ModuleRegistrationOptions & TargetFactoryWrapper<R>
+    ModuleRegistrationOptions & ResolverFactoryOptions<R>
   )): void 
 
   public register<R extends object>(token: Token, options: (
-    ModuleRegistrationOptions & TargetConstructorWrapper<R>
+    ModuleRegistrationOptions & ResolverConstructorOptions<R>
   )): void 
 
   public register<R extends object>(token: Token, options: (
-    | ModuleRegistrationOptions & TargetFactoryWrapper<R>
-    | ModuleRegistrationOptions & TargetConstructorWrapper<R>
+    ModuleRegistrationOptions & ResolverOptions<R>
   )): void {
-    const resolver = Resolver.create(options)
-    this.setResolver(token, resolver, options)
+    const registration = ModuleRegistration.create({ ...options })
+    this.setRegistration(token, registration)
   }
 
-  public registerFactory(token: Token, factory: TargetFactory, options?: ModuleRegistrationOptions): void {
-    const resolver = Resolver.create({ factory })
-    this.setResolver(token, resolver, options)
+  public registerFactory<R extends object>(token: Token, factory: TargetFactory, options?: (
+    ModuleRegistrationOptions & Omit<ResolverFactoryOptions<R>, 'factory'>
+  )): void {
+    const registration = ModuleRegistration.create({ ...options, factory })
+    this.setRegistration(token, registration)
   }
 
-  public registerConstructor(token: Token, constructor: TargetConstructor, options?: ModuleRegistrationOptions): void {
-    const resolver = Resolver.create({ constructor })
-    this.setResolver(token, resolver, options)
-  }
-
-  protected setResolvers<R extends object>(...entries: [token: Token, resolver: Resolver<R>, options?: ModuleRegistrationOptions][]): void {
-    entries.forEach(entry => this.setResolver(...entry))
-  }
-
-  protected setResolver<R extends object>(token: Token, resolver: Resolver<R>, options?: ModuleRegistrationOptions): void {
-    const registration = ModuleRegistration.create(resolver, options)
+  public registerConstructor<R extends object>(token: Token, constructor: TargetConstructor, options?: (
+    ModuleRegistrationOptions & Omit<ResolverConstructorOptions<R>, 'constructor'>
+  )): void {
+    const registration = ModuleRegistration.create({ ...options, constructor })
     this.setRegistration(token, registration)
   }
 
