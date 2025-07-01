@@ -1,13 +1,13 @@
 import { Bundle } from './bundle'
 import { Context } from  './context'
-import { Resolver } from './resolver'
+import { Resolver, ResolverOptions } from './resolver'
 
 type RegistrationLifecycle =
   | 'scoped' // Return an instance from the scope context if one exist
   | 'transient' // Will always return a new instance of the registration
   | 'singleton' // Will return an instance from the root context if one exist
 
-export type RegistrationDeclarationOptions = {
+export type RegistrationDeclarationOptions<T = any> = {
   context?: Context | undefined,
   lifecycle?: RegistrationLifecycle,
 }
@@ -18,9 +18,10 @@ export type RegistrationResolutionOptions = {
   lifecycle?: RegistrationLifecycle,
 }
 
-export class Registration<T extends object = any> {
-  public static create<T extends object = any>(resolver: Resolver<T>, options?: RegistrationDeclarationOptions): Registration<T> {
-    return new Registration<T>(resolver, options)
+export class Registration<T = any> {
+  public static create<T = any>(options: RegistrationDeclarationOptions & ResolverOptions<T>): Registration<T> {
+    const resolver = Resolver.create(options)
+    return new Registration(resolver, options)
   }
 
   protected readonly resolver: Resolver<T>
@@ -61,7 +62,7 @@ export class Registration<T extends object = any> {
       throw new Error('Could not resolve scoped registration. Missing resolution context')
     }
 
-    throw new Error(`Could not resolve registration. Invalid lifecycle: ${this.lifecycle}.`)
+    throw new Error(`Could not resolve registration. Invalid "${this.lifecycle}" lifecycle.`)
   }
 }
 
