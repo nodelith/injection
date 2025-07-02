@@ -62,7 +62,6 @@ export class Registration<T = any> {
       throw new Error('Could not resolve scoped registration. Missing resolution context')
     }
 
-    throw new Error(`Could not resolve registration. Invalid "${this.lifecycle}" lifecycle.`)
+    throw new Error(`Could not resolve registration. Invalid "${lifecycle}" lifecycle.`)
   }
 }
-
