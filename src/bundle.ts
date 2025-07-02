@@ -61,5 +61,3 @@ export namespace Bundle {
   export const create = createBundle
   export const merge = mergeBundles
 }
-
-Object.create
