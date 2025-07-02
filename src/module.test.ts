@@ -1,4 +1,4 @@
-import { Bundle } from 'bundle'
+import { Bundle } from './bundle'
 import { Module } from './module'
 
 describe('Module', () => {

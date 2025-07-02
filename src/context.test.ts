@@ -1,4 +1,4 @@
-import { Bundle } from 'bundle'
+import { Bundle } from './bundle'
 import { Context } from './context'
 
 describe('Context', () => {
