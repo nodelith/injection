@@ -174,14 +174,18 @@ describe('Identity', () => {
       expect(typeof identity).toBe('string')
     })
 
-    it('throws on frozen objects', () => {
-      const frozen = Object.freeze({})
-      expect(() => extractIdentity(frozen)).toThrow()
+    it('throws when called on a frozen object', () => {
+      const frozen = Object.freeze({ value: '123' });
+      expect(() => {
+        extractIdentity(frozen);
+      }).toThrow('Could not assign identity. Target object is frozen.');
     })
 
-    it('throws on non-extensible objects', () => {
-      const sealed = Object.preventExtensions({})
-      expect(() => extractIdentity(sealed)).toThrow()
+    it('throws when called on a non-extensible object', () => {
+      const nonExtensible = Object.preventExtensions({ value: '123' });
+      expect(() => {
+        extractIdentity(nonExtensible);
+      }).toThrow('Could not assign identity. Target object is not extensible.');
     })
   })
 

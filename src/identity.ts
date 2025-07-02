@@ -1,4 +1,3 @@
-
 import { randomUUID, UUID } from 'crypto'
 
 const IDENTITY_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -90,8 +89,16 @@ export function bindIdentity<T extends object = any>(source: object, target: T):
 
   const existing = target[IDENTITY_KEY]
 
+  if(Object.isFrozen(target)) {
+    throw new Error('Could not assign identity. Target object is frozen.')
+  }
+
+  if(!Object.isExtensible(target)) {
+    throw new Error('Could not assign identity. Target object is not extensible.')
+  }
+
   if (Object.getOwnPropertyDescriptor(target, IDENTITY_KEY)) {
-    throw new Error(`Target already has an identity value: ${existing}`)
+    throw new Error(`Could not assign identity. Target already has an identity value: ${existing}`)
   }
 
   Object.defineProperty(target, IDENTITY_KEY, {
@@ -103,16 +110,24 @@ export function bindIdentity<T extends object = any>(source: object, target: T):
   return target
 }
 
-export function extractIdentity(object: Object): Identity {
-  if (!Object.getOwnPropertyDescriptor(object, IDENTITY_KEY)) {
-    Object.defineProperty(object, IDENTITY_KEY, {
+export function extractIdentity(target: Object): Identity {
+
+  if(Object.isFrozen(target)) {
+    throw new Error('Could not assign identity. Target object is frozen.')
+  }
+
+  if(!Object.isExtensible(target)) {
+    throw new Error('Could not assign identity. Target object is not extensible.')
+  }
+
+  if (!Object.getOwnPropertyDescriptor(target, IDENTITY_KEY)) {
+    Object.defineProperty(target, IDENTITY_KEY, {
       value: createIdentity(),
       configurable: false,
       enumerable: false,
     })
   }
-
-  return object[IDENTITY_KEY]
+  return target[IDENTITY_KEY]
 }
 
 export namespace Identity {
