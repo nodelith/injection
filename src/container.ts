@@ -21,6 +21,8 @@ export class Container<R extends Registration = Registration> {
 
   private readonly registry: Map<Token, R>
 
+  private readonly stack: Set<Token> = new Set()
+
   public get registrations(): ReadonlyArray<R> {
     return [...this.registry.values()]
   }
@@ -43,6 +45,12 @@ export class Container<R extends Registration = Registration> {
   }
 
   public resolve<T>(token: Token<T>, options?: ContainerResolutionOptions): T {
+    if(this.stack.has(token)) {
+      throw new Error(`Could not resolve registration. Unresolvable circular dependencies detected: ${[...this.stack, token].join(' > ')}`)
+    }
+
+    this.stack.add(token)
+
     const resolutionContext = options?.context ?? Context.create()
 
     const resolutionEntries = this.entries.map(([token]): BundleDescriptorEntry => {
@@ -57,13 +65,15 @@ export class Container<R extends Registration = Registration> {
       ...resolutionEntries
     )
 
-    const resolution =  this.registry.get(token)?.resolve({ ...options,
+    const resolution = this.registry.get(token)?.resolve({ ...options,
       context: resolutionContext,
       bundle: Bundle.merge(
         resolutionBundle,
         options?.bundle,
       )
     })
+
+    this.stack.delete(token)
 
     return resolution
   }

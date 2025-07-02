@@ -321,6 +321,27 @@ describe('Container (integration)', () => {
     expect((container.resolve(targetToken_1)).callDependency()).toBe('calledTarget_0')
   })
 
+  it('should throw when resolving cyclic dependency with eager registrations', () => {
+    const container = Container.create()
+
+    container.register('target0', Registration.create({
+      function: (bundle: Bundle) => 'value0'
+    }))
+
+    container.register('target1', Registration.create({
+      function: (bundle: Bundle) => `${bundle.target0}:${bundle.target2}`
+    }))
+
+    container.register('target2', Registration.create({
+      function: (bundle: Bundle) => `${bundle.target1}`
+    }))
+
+    expect(() => {
+      const t = container.resolve('target2')
+      console.log(t)
+    }).toThrow('Could not resolve registration. Unresolvable circular dependencies detected: target2 > target1 > target2')
+  })
+
   it('should inject internal registrations', () => {
     const container = Container.create()
 
@@ -436,10 +457,6 @@ describe('Container (integration)', () => {
     expect(cloned).not.toBe(container)
     expect(cloned.resolve(token)).toBe(123)
   })
-
-  // HERE ON
-
-
 
   it('should return entries and registration list', () => {
     const container = Container.create()
