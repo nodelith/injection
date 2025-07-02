@@ -19,7 +19,7 @@ describe('Module', () => {
       const token = 'unregistered'
 
       expect(() => module.resolve(token)).toThrow(
-        `Could not resolve token "${token}". Module does not contain a registration associted to the given token.`
+        `Could not resolve token "${token}". Module does not contain a registration associated to the given token.`
       )
     })
 
@@ -34,7 +34,7 @@ describe('Module', () => {
       })
 
       expect(() => module.resolve(token)).toThrow(
-        `Could not resolve token "${token.toString()}". Module does not expose a registration associted to the given token.`
+        `Could not resolve token "${token.toString()}". Module does not expose a registration associated to the given token.`
       )
     })
   })
@@ -257,7 +257,7 @@ describe('Module', () => {
       module_1.registerFactory(token_1, factory_1, { visibility: 'public' })
       module_0.import(module_1)
 
-      const expectedErrorMessage = `Could not resolve token "${token_1}". Module does not contain a registration associted to the given token.`
+      const expectedErrorMessage = `Could not resolve token "${token_1}". Module does not contain a registration associated to the given token.`
     
       expect(() => { module_0.resolve(token_1) }).toThrow(expectedErrorMessage)
     })

@@ -126,11 +126,11 @@ export class Module {
 
   public resolve<T>(token: Token, options?: ModuleResolutionOptions): T {
     if(!this._container.has(token)) {
-      throw new Error(`Could not resolve token "${token.toString()}". Module does not contain a registration associted to the given token.`)
+      throw new Error(`Could not resolve token "${token.toString()}". Module does not contain a registration associated to the given token.`)
     }
 
     if(!this.exposes(token)) {
-      throw new Error(`Could not resolve token "${token.toString()}". Module does not expose a registration associted to the given token.`)
+      throw new Error(`Could not resolve token "${token.toString()}". Module does not expose a registration associated to the given token.`)
     }
 
     const resolutionContext = options?.context ?? Context.create()
