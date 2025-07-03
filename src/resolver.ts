@@ -1,31 +1,41 @@
 import { 
-  TargetConstructor,
   TargetConstructorWrapper,
-  TargetFactory,
   TargetFactoryWrapper,
-  TargetFunction,
   TargetFunctionWrapper,
+  TargetStaticWrapper,
   TargetStatic,
-  TargetStaticWrapper
 } from 'target'
 import { Identity } from './identity'
 import { Bundle } from './bundle'
 
-export type ResolutionStrategy = 'eager' | 'lazy' 
+export type ResolutionStrategy = 'eager' | 'lazy'
+
+export type InjectionStrategy = 'positional' | 'bundle'
 
 export type Resolver<T = any> = (bundle: Bundle) => T
 
 export type ResolverConstructorOptions<T extends object = any> =
-  (TargetConstructorWrapper<T> & { resolution?: ResolutionStrategy })
+  (TargetConstructorWrapper<T> & {
+    resolution?: ResolutionStrategy
+    injection?: InjectionStrategy
+  })
 
 export type ResolverFactoryOptions<T extends object = any> =
-  (TargetFactoryWrapper<T> & { resolution?: ResolutionStrategy })
+  (TargetFactoryWrapper<T> & { 
+    resolution?: ResolutionStrategy 
+    injection?: InjectionStrategy
+  })
 
 export type ResolverFunctionOptions<T extends any = any> = 
-  (TargetFunctionWrapper<T> & { resolution?: ResolutionStrategy & 'lazy' })
+  (TargetFunctionWrapper<T> & {
+    resolution?: Extract<ResolutionStrategy, 'lazy'>
+    injection?: InjectionStrategy
+  })
 
 export type ResolverStaticOptions<T extends any = any> = 
-  (TargetStaticWrapper<T> & { resolution?: ResolutionStrategy & 'lazy' })
+  (TargetStaticWrapper<T> & { 
+    resolution?: Extract<ResolutionStrategy, 'lazy'>
+  })
 
 export type ResolverObjectOptions<T extends object = any> =
   | ResolverConstructorOptions<T>
@@ -39,7 +49,25 @@ export type ResolverOptions<T extends any> = T extends object
   ? ResolverObjectOptions<T> | ResolverValueOptions<T>
     : ResolverValueOptions<T>
 
-export function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: object): Resolver<T> {
+function extractParameters(target: any): string[] {
+  const functionArgumentListRegex = new RegExp(/(\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s*=[^,)]*(('(?:\\'|[^'\r\n])*')|("(?:\\"|[^"\r\n])*"))|(\s*=[^,)]*))/gm)
+
+  const functionArgumentIdentifiersRegex = new RegExp(/([^\s,]+)/g)
+
+  const functionString = target.toString().replace(functionArgumentListRegex, '')
+
+  const argumentDeclarationFirstIndex = functionString.indexOf('(') + 1
+
+  const argumentDeclarationLastIndex = functionString.indexOf(')')
+
+  const argumentString = functionString.slice(argumentDeclarationFirstIndex, argumentDeclarationLastIndex)
+
+  const argumentNames = argumentString.match(functionArgumentIdentifiersRegex)
+
+  return argumentNames ?? []
+}
+
+function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: object): Resolver<T> {
   const resolution: { instance?: T } = { }
 
   const resolveInstance = (bundle: Bundle): T => {
@@ -88,39 +116,78 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
     }
   }
 
-
   if(Object.prototype.hasOwnProperty.call(options, 'function') && 'function' in options ) {
+    const { function: target, injection = 'bundle' } = options as ResolverFunctionOptions<T>
+
+    const parameters = injection === 'positional'
+      ? extractParameters(target)
+      : undefined
+
     if(resolution !== 'eager') {
       throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for function target.`)
     }
 
-    return Identity.bind(options.function, (bundle: Bundle) => {
-      return (options.function as TargetFunction<T>)(bundle)
+    return Identity.bind(target, (bundle: Bundle) => {
+      return target(...parameters?.map(parameter => {
+        return bundle[parameter]
+      }) ?? [bundle])
     })
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'eager') {
-    return Identity.bind(options.factory, (bundle: Bundle) => {
-      return (options.factory as TargetFactory<T & object>)(bundle)
+    const { factory: target, injection = 'bundle' } = options as ResolverFactoryOptions<T & object>
+
+    const parameters = injection === 'positional'
+      ? extractParameters(target)
+      : undefined
+
+    return Identity.bind(target, (bundle: Bundle) => {
+      return target(...parameters?.map(parameter => {
+        return bundle[parameter]
+      }) ?? [bundle])
     })
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'lazy') {
-    return createProxy(Identity.bind(options.factory, (bundle: Bundle) => {
-      return (options.factory as TargetFactory<T & object>)(bundle)
+    const { factory: target, injection = 'bundle' } = options as ResolverFactoryOptions<T & object>
+
+    const params = injection === 'positional'
+      ? extractParameters(target)
+      : undefined
+
+    return createProxy(Identity.bind(target, (bundle: Bundle) => {
+      return target(...params?.map(parameter => {
+        return bundle[parameter]
+      }) ?? [bundle])
     }))
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'eager') {
-    return Identity.bind(options.constructor, (bundle: Bundle) => {
-      return new (options.constructor as TargetConstructor<T & object>)(bundle)
+    const { constructor: target, injection = 'bundle' } = options as ResolverConstructorOptions<T & object>
+
+    const params = injection === 'positional'
+      ? extractParameters(target)
+      : undefined
+
+    return Identity.bind(target, (bundle: Bundle) => {
+      return new target(...params?.map(parameter => {
+        return bundle[parameter]
+      }) ?? [bundle])
     })
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'lazy') {
-    return createProxy(Identity.bind(options.constructor, (bundle: Bundle) => {
-      return new (options.constructor as TargetConstructor<T & object>)(bundle) 
-    }), options.constructor.prototype)
+    const { constructor: target, injection = 'bundle' } = options as ResolverConstructorOptions<T & object>
+
+    const params = injection === 'positional'
+      ? extractParameters(target)
+      : undefined
+
+    return createProxy(Identity.bind(target, (bundle: Bundle) => {
+      return new target(...params?.map(parameter => {
+        return bundle[parameter]
+      }) ?? [bundle]) 
+    }), target.prototype)
   }
 
   throw new Error(`Could not create resolver. Invalid registration options.`)

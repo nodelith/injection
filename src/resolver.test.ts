@@ -2,6 +2,7 @@ import { createResolver } from './resolver'
 import { Identity } from './identity'
 
 describe('Resolver', () => {
+
   it('creates a lazy resolver from a factory', () => {
     const target = jest.fn(() => ({ foo: 'bar' }))
 
@@ -499,6 +500,67 @@ describe('Resolver', () => {
     const result = resolver({})
     expect(target).toHaveBeenCalledWith({})
     expect(result.foo).toBe('bar')
+  })
+
+  it('should resolve function dependencies based on positional parameter identifiers', () => {
+    const target = (prefix: string, suffix: string) => `${prefix}:${suffix}`
+
+    const resolver = createResolver({
+      injection: 'positional',
+      function: target,
+    })
+
+    const result = resolver({
+      prefix: 'prefix',
+      suffix: 'suffix'
+    })
+
+    expect(result).toBe('prefix:suffix')
+  })
+
+  it('should resolve factory dependencies based on positional parameter identifiers', () => {
+    const target = (prefix: string, suffix: string) => ({ 
+      value: `${prefix}:${suffix}` 
+    })
+
+    const resolver = createResolver({
+      injection: 'positional',
+      factory: target,
+    })
+
+    const result = resolver({
+      prefix: 'prefix',
+      suffix: 'suffix'
+    })
+
+    expect(result).toEqual({ 
+      value: 'prefix:suffix'
+    })
+  })
+
+  it('should resolve constructor dependencies based on positional parameter identifiers', () => {
+    class Target {
+      public value: string
+      constructor(prefix: string, suffix: string) {
+        this.value = `${prefix}:${suffix}`
+      }
+    }
+
+    const resolver = createResolver({
+      injection: 'positional',
+      constructor: Target,
+    })
+
+    const result = resolver({
+      prefix: 'prefix',
+      suffix: 'suffix'
+    })
+
+    expect(result).toBeInstanceOf(Target)
+
+    expect(result).toEqual({
+      value: 'prefix:suffix'
+    })
   })
 
   it('throws error for static resolver with lazy resolution', () => {

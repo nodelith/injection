@@ -350,7 +350,7 @@ describe('Container (integration)', () => {
     }))
 
     const token_b = container.register('token_b', Registration.create({
-      static: 'prefix'
+      static: 'prefix',
     }))
 
     const token_c = container.register('token_x', Registration.create({
