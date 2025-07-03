@@ -119,74 +119,74 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
   if(Object.prototype.hasOwnProperty.call(options, 'function') && 'function' in options ) {
     const { function: target, injection = 'bundle' } = options as ResolverFunctionOptions<T>
 
-    const parameters = injection === 'positional'
-      ? extractParameters(target)
-      : undefined
+    const parameters = injection === 'positional' ? extractParameters(target) : undefined
 
     if(resolution !== 'eager') {
       throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for function target.`)
     }
 
     return Identity.bind(target, (bundle: Bundle) => {
-      return target(...parameters?.map(parameter => {
+      const dependencies = parameters?.map(parameter => {
         return bundle[parameter]
-      }) ?? [bundle])
+      }) ?? [bundle]
+
+      return target(...dependencies)
     })
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'eager') {
     const { factory: target, injection = 'bundle' } = options as ResolverFactoryOptions<T & object>
 
-    const parameters = injection === 'positional'
-      ? extractParameters(target)
-      : undefined
+    const parameters = (injection === 'positional') ? extractParameters(target) : undefined
 
     return Identity.bind(target, (bundle: Bundle) => {
-      return target(...parameters?.map(parameter => {
+      const dependencies = parameters?.map(parameter => {
         return bundle[parameter]
-      }) ?? [bundle])
+      }) ?? [bundle]
+
+      return target(...dependencies)
     })
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'lazy') {
     const { factory: target, injection = 'bundle' } = options as ResolverFactoryOptions<T & object>
 
-    const params = injection === 'positional'
-      ? extractParameters(target)
-      : undefined
+    const params = (injection === 'positional') ? extractParameters(target) : undefined
 
     return createProxy(Identity.bind(target, (bundle: Bundle) => {
-      return target(...params?.map(parameter => {
+      const dependencies = params?.map(parameter => {
         return bundle[parameter]
-      }) ?? [bundle])
+      }) ?? [bundle]
+
+      return target(...dependencies)
     }))
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'eager') {
     const { constructor: target, injection = 'bundle' } = options as ResolverConstructorOptions<T & object>
 
-    const params = injection === 'positional'
-      ? extractParameters(target)
-      : undefined
+    const parameters = (injection === 'positional') ? extractParameters(target) : undefined
 
     return Identity.bind(target, (bundle: Bundle) => {
-      return new target(...params?.map(parameter => {
+      const dependencies = parameters?.map(parameter => {
         return bundle[parameter]
-      }) ?? [bundle])
+      }) ?? [bundle]
+
+      return new target(...dependencies)
     })
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'lazy') {
     const { constructor: target, injection = 'bundle' } = options as ResolverConstructorOptions<T & object>
 
-    const params = injection === 'positional'
-      ? extractParameters(target)
-      : undefined
+    const parameters = (injection === 'positional') ? extractParameters(target) : undefined
 
     return createProxy(Identity.bind(target, (bundle: Bundle) => {
-      return new target(...params?.map(parameter => {
+      const dependencies = parameters?.map(parameter => {
         return bundle[parameter]
-      }) ?? [bundle]) 
+      }) ?? [bundle]
+
+      return new target(...dependencies) 
     }), target.prototype)
   }
 
