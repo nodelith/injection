@@ -110,7 +110,7 @@ function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: 
   })
 }
 
-export function createStaticResolver<T extends any>(options: ResolverStaticOptions) {
+function createStaticResolver(options: ResolverStaticOptions) {
   const resolutionStrategy = options.resolution ?? DEFAULT_RESOLUTION_STRATEGY
 
   if(resolutionStrategy !== 'eager') {
@@ -118,11 +118,11 @@ export function createStaticResolver<T extends any>(options: ResolverStaticOptio
   }
 
   return (_bundle: Bundle) => {
-    return options.static as TargetStatic<T>
+    return options.static
   }
 }
 
-export function createFunctionResolver<T extends any>(options: ResolverFunctionOptions) {
+function createFunctionResolver(options: ResolverFunctionOptions) {
   const resolutionStrategy = options.resolution ?? DEFAULT_RESOLUTION_STRATEGY
   const injectionStrategy = options.injection ?? DEFAULT_INJECTION_STRATEGY
 
@@ -143,72 +143,83 @@ export function createFunctionResolver<T extends any>(options: ResolverFunctionO
 
   return resolver;
 }
-    
+
+function createFactoryResolver(options: ResolverFactoryOptions) {
+  const resolutionStrategy = options.resolution ?? DEFAULT_RESOLUTION_STRATEGY
+  const injectionStrategy = options.injection ?? DEFAULT_INJECTION_STRATEGY
+
+  const target = options.factory
+
+  const parameters = injectionStrategy === 'positional'
+    ? extractParameters(target)
+    : undefined
+
+  const resolver = Identity.bind(target, (bundle: Bundle) => {
+    const dependencies = parameters?.map(parameter => {
+      return bundle[parameter]
+    }) ?? [bundle]
+
+    return target(...dependencies)
+  })
+
+  if(resolutionStrategy === 'lazy') {
+    return createProxy(resolver)
+  }
+
+  if(resolutionStrategy === 'eager') {
+    return resolver
+  }
+
+  throw new Error(`Could not create factory resolver. Invalid registration options.`)
+}
+
+function createConstructorResolver(options: ResolverConstructorOptions) {
+  const resolutionStrategy = options.resolution ?? DEFAULT_RESOLUTION_STRATEGY
+  const injectionStrategy = options.injection ?? DEFAULT_INJECTION_STRATEGY
+
+  const target = options.constructor
+
+  const parameters = injectionStrategy === 'positional'
+    ? extractParameters(target)
+    : undefined
+
+  const resolver = Identity.bind(target, (bundle: Bundle) => {
+    const dependencies = parameters?.map(parameter => {
+      return bundle[parameter]
+    }) ?? [bundle]
+
+    return new target(...dependencies)
+  })
+
+  if(resolutionStrategy === 'lazy') {
+    return createProxy(resolver, target.prototype)
+  }
+
+  if(resolutionStrategy === 'eager') {
+    return resolver
+  }
+
+  throw new Error(`Could not create factory resolver. Invalid registration options.`)
+
+}
+
 export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T> {
   const resolution = options.resolution ?? 'eager'
 
   if(Object.prototype.hasOwnProperty.call(options, 'static') && 'static' in options ) {
-    return createStaticResolver(options)
+    return createStaticResolver(options as ResolverStaticOptions)
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'function') && 'function' in options ) {
-    return createFunctionResolver(options)
+    return createFunctionResolver(options as ResolverFunctionOptions)
   }
 
-  if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'eager') {
-    const { factory: target, injection = 'bundle' } = options as ResolverFactoryOptions<T & object>
-
-    const parameters = (injection === 'positional') ? extractParameters(target) : undefined
-
-    return Identity.bind(target, (bundle: Bundle) => {
-      const dependencies = parameters?.map(parameter => {
-        return bundle[parameter]
-      }) ?? [bundle]
-
-      return target(...dependencies)
-    })
+  if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options) {
+    return createFactoryResolver(options as ResolverFactoryOptions)
   }
 
-  if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'lazy') {
-    const { factory: target, injection = 'bundle' } = options as ResolverFactoryOptions<T & object>
-
-    const params = (injection === 'positional') ? extractParameters(target) : undefined
-
-    return createProxy(Identity.bind(target, (bundle: Bundle) => {
-      const dependencies = params?.map(parameter => {
-        return bundle[parameter]
-      }) ?? [bundle]
-
-      return target(...dependencies)
-    }))
-  }
-
-  if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'eager') {
-    const { constructor: target, injection = 'bundle' } = options as ResolverConstructorOptions<T & object>
-
-    const parameters = (injection === 'positional') ? extractParameters(target) : undefined
-
-    return Identity.bind(target, (bundle: Bundle) => {
-      const dependencies = parameters?.map(parameter => {
-        return bundle[parameter]
-      }) ?? [bundle]
-
-      return new target(...dependencies)
-    })
-  }
-
-  if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options && resolution === 'lazy') {
-    const { constructor: target, injection = 'bundle' } = options as ResolverConstructorOptions<T & object>
-
-    const parameters = (injection === 'positional') ? extractParameters(target) : undefined
-
-    return createProxy(Identity.bind(target, (bundle: Bundle) => {
-      const dependencies = parameters?.map(parameter => {
-        return bundle[parameter]
-      }) ?? [bundle]
-
-      return new target(...dependencies) 
-    }), target.prototype)
+  if(Object.prototype.hasOwnProperty.call(options, 'constructor') && 'constructor' in options) {
+    return createConstructorResolver(options as ResolverConstructorOptions)
   }
 
   throw new Error(`Could not create resolver. Invalid registration options.`)
