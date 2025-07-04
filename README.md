@@ -1,6 +1,6 @@
 # @nodelith/injection
 
-A flexible and lightweight dependency injection library for JavaScript and TypeScripResolve complex dependency graphs using classes, factory functions, or static valueManage dependency visibility and lifecycles with easBuild composable, reusable modules for clean and maintainable architectures.
+A flexible and lightweight dependency injection library for JavaScript and TypeScript. Resolve complex dependency graphs using classes, factories, functions, or static values. Manage dependency visibility and lifecycles with ease. Build composable, reusable modules for clean and maintainable architectures.
 
 ## 📦 Installation
 
@@ -10,7 +10,7 @@ npm install @nodelith/injection
 
 ## 🚀 Quick Example
 
-**Say you have a small program to put togheter:**
+**Say you have a small program to put together:**
 
 ```typescript
 class Logger {
@@ -26,7 +26,7 @@ class Database {
   ) {}
 
   public async save(username: string) {
-    this.serverLogger.info(`Saving user: ${username} to ${address}`)
+    this.logger.info(`Saving user: ${username} to ${this.address}`)
   }
 }
 
@@ -35,7 +35,7 @@ class Service {
     private logger: Logger,
     private database: Database,
   ) {}
-  
+
   public async create(username: string) {
     this.logger.info(`Creating user: ${username}`)
     return await this.database.save(username)
@@ -43,34 +43,36 @@ class Service {
 }
 ```
 
-**All you need to do to wire eerything up is:**
+**All you need to do to wire everything up is:**
 
 ```typescript
-// Set up a Container:
-const containerModule = Container.create()
+// Import the Nodelith Container and set it up
+import { Container } from '@nodelith/injection'
+const container = Container.create()
 
 // Register your dependencies:
-containerModule.register('logger', { constructor: Logger })
-containerModule.register('database', { constructor: Database })
-containerModule.register('userService', { constructor: Service })
+container.register('logger', { constructor: Logger })
+container.register('database', { constructor: Database })
+container.register('userService', { constructor: Service })
 ```
 
-**Finaly, resolve the wanted root dependency and use it:**
+**Finally, resolve the wanted root dependency and use it:**
 
 ```typescript
 // Resolve the desired dependency:
-const userService = containerModule.resolve('userService')
+const userService = container.resolve<Service>('userService')
 
 // Use the resolved dependency instance:
 const user = userService.create('johndoe')
 // Logs: Creating user: johndoe
-// Logs: Saving user: johndoe
+// Logs: Saving user: johndoe to localhost:3000
 ```
 
 **Not into classes? Inject dependencies from factories instead!**
+
 ```typescript
 // Declare your factory so that it returns an object
-function userControlerFactory(userService: UserService) {
+function userControllerFactory(userService: Service) {
   return {
     create(request: Request) {
       userService.create(request.body.username)
@@ -79,32 +81,33 @@ function userControlerFactory(userService: UserService) {
 }
 
 // Register it under your container
-containerModule.register('userController', { factory: userControlerFactory })
+container.register('userController', { factory: userControllerFactory })
 ```
 
-**Needs to inject static values? Just do it**
+**Need to inject static values? Just do it:**
 
 ```typescript
 // Pass the static value under the registration options
-containerModule.register('address', { static: 'localhost:3002' })
+container.register('address', { static: 'localhost:3002' })
 ```
 
-**Wanna make it composable? Make it a Module instead!**
+**Want to make it composable? Make it a Module instead!**
 
 ```typescript
 // Instead of a Container, set up a Module
+import { Module } from '@nodelith/injection'
 const userModule = Module.create()
 
 // Register your dependencies:
-userModule.register('user', { 
-  static: 'myself', 
+userModule.register('user', {
+  static: 'myself',
   visibility: 'private'
 })
 userModule.register('address', {
   static: 'localhost:3002',
   visibility: 'private'
 })
-userModule.register('password', { 
+userModule.register('password', {
   static: 'mysafepassword',
   visibility: 'private'
 })
@@ -117,15 +120,15 @@ userModule.register('database', {
   visibility: 'private'
 })
 userModule.register('userService', {
-  constructor: UserService,
+  constructor: Service,
   visibility: 'private'
 })
-containerModule.register('userController', { 
-  factory: userController, 
-  visibilty:'public'
+userModule.register('userController', {
+  factory: userControllerFactory,
+  visibility: 'public'
 })
 
-// Import it within other Modules, exposing only the public registrations: 
+// Import it within other Modules, exposing only the public registrations:
+const applicationModule = Module.create()
 applicationModule.import(userModule)
 ```
-
