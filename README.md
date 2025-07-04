@@ -21,7 +21,7 @@ class Logger {
 
 class Database {
   public constructor(
-    private database: string = 'default_db',
+    private database: string = 'default_database',
     private logger: Logger,
   ) {}
 
@@ -65,7 +65,7 @@ const userService = container.resolve('userService')
 // Use the resolved dependency instance:
 const user = await userService.create('johndoe')
 // Logs: Creating user: johndoe
-// Logs: Saving user: johndoe to default_db
+// Logs: Saving user: johndoe to default_database
 ```
 
 **Not into classes? Inject dependencies from factories instead:**
@@ -88,7 +88,7 @@ container.register('userController', { factory: UserController })
 
 ```typescript
 // Pass the static value under the registration options
-container.register('database', { static: 'custom_db' })
+container.register('database', { static: 'custom_database' })
 ```
 
 **Want to make it composable? Use Modules:**
@@ -104,11 +104,7 @@ userModule.register('user', {
   visibility: 'private'
 })
 userModule.register('database', {
-  static: 'localhost:3002',
-  visibility: 'private'
-})
-userModule.register('password', {
-  static: 'mysafepassword',
+  static: 'custom_database',
   visibility: 'private'
 })
 userModule.register('logger', {
