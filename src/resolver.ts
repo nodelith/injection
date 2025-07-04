@@ -3,8 +3,7 @@ import {
   TargetFactoryWrapper,
   TargetFunctionWrapper,
   TargetStaticWrapper,
-  TargetStatic,
-} from 'target'
+} from './target'
 import { Identity } from './identity'
 import { Bundle } from './bundle'
 
