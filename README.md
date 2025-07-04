@@ -21,16 +21,16 @@ class Logger {
 
 class Database {
   public constructor(
-    private address: string = 'localhost:3000',
+    private database: string = 'default_db',
     private logger: Logger,
   ) {}
 
   public async save(username: string) {
-    this.logger.info(`Saving user: ${username} to ${this.address}`)
+    this.logger.info(`Saving user: ${username} to ${this.database}`)
   }
 }
 
-class Service {
+class UserService {
   public constructor(
     private logger: Logger,
     private database: Database,
@@ -53,45 +53,45 @@ const container = Container.create()
 // Register your dependencies:
 container.register('logger', { constructor: Logger })
 container.register('database', { constructor: Database })
-container.register('userService', { constructor: Service })
+container.register('userService', { constructor: UserService })
 ```
 
 **Finally, resolve the wanted root dependency and use it:**
 
 ```typescript
 // Resolve the desired dependency:
-const userService = container.resolve<Service>('userService')
+const userService = container.resolve('userService')
 
 // Use the resolved dependency instance:
-const user = userService.create('johndoe')
+const user = await userService.create('johndoe')
 // Logs: Creating user: johndoe
-// Logs: Saving user: johndoe to localhost:3000
+// Logs: Saving user: johndoe to default_db
 ```
 
-**Not into classes? Inject dependencies from factories instead!**
+**Not into classes? Inject dependencies from factories instead:**
 
 ```typescript
 // Declare your factory so that it returns an object
-function userControllerFactory(userService: Service) {
+function UserController(userService: UserService) {
   return {
-    create(request: Request) {
-      userService.create(request.body.username)
+    async create(request: { body: { username: string } }) {
+      return userService.create(request.body.username)
     }
   }
 }
 
 // Register it under your container
-container.register('userController', { factory: userControllerFactory })
+container.register('userController', { factory: UserController })
 ```
 
 **Need to inject static values? Just do it:**
 
 ```typescript
 // Pass the static value under the registration options
-container.register('address', { static: 'localhost:3002' })
+container.register('database', { static: 'custom_db' })
 ```
 
-**Want to make it composable? Make it a Module instead!**
+**Want to make it composable? Use Modules:**
 
 ```typescript
 // Instead of a Container, set up a Module
@@ -103,7 +103,7 @@ userModule.register('user', {
   static: 'myself',
   visibility: 'private'
 })
-userModule.register('address', {
+userModule.register('database', {
   static: 'localhost:3002',
   visibility: 'private'
 })
@@ -120,11 +120,11 @@ userModule.register('database', {
   visibility: 'private'
 })
 userModule.register('userService', {
-  constructor: Service,
+  constructor: UserService,
   visibility: 'private'
 })
 userModule.register('userController', {
-  factory: userControllerFactory,
+  factory: UserController,
   visibility: 'public'
 })
 
