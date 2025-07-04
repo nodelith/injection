@@ -121,6 +121,28 @@ export function createStaticResolver<T extends any>(options: ResolverStaticOptio
     return options.static as TargetStatic<T>
   }
 }
+
+export function createFunctionResolver<T extends any>(options: ResolverFunctionOptions) {
+  const resolutionStrategy = options.resolution ?? DEFAULT_RESOLUTION_STRATEGY
+  const injectionStrategy = options.injection ?? DEFAULT_INJECTION_STRATEGY
+
+  const target = options.function
+
+  const parameters = injectionStrategy === 'positional'
+    ? extractParameters(target)
+    : undefined
+
+  if(resolutionStrategy !== 'eager') {
+    throw new Error(`Could not create resolver. Invalid "${resolutionStrategy}" resolution option for function target.`)
+  }
+
+  const resolver = Identity.bind(target, (bundle: Bundle) => {
+    const dependencies = parameters?.map(parameter => bundle[parameter]) ?? [bundle]
+    return target(...dependencies)
+  })
+
+  return resolver;
+}
     
 export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T> {
   const resolution = options.resolution ?? 'eager'
@@ -130,21 +152,7 @@ export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'function') && 'function' in options ) {
-    const { function: target, injection = 'bundle' } = options as ResolverFunctionOptions<T>
-
-    const parameters = injection === 'positional' ? extractParameters(target) : undefined
-
-    if(resolution !== 'eager') {
-      throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for function target.`)
-    }
-
-    return Identity.bind(target, (bundle: Bundle) => {
-      const dependencies = parameters?.map(parameter => {
-        return bundle[parameter]
-      }) ?? [bundle]
-
-      return target(...dependencies)
-    })
+    return createFunctionResolver(options)
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'factory') && 'factory' in options && resolution === 'eager') {
