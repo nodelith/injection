@@ -8,6 +8,10 @@ import {
 import { Identity } from './identity'
 import { Bundle } from './bundle'
 
+export const DEFAULT_RESOLUTION_STRATEGY: ResolutionStrategy = 'eager' as const
+
+export const DEFAULT_INJECTION_STRATEGY: InjectionStrategy = 'bundle' as const
+
 export type ResolutionStrategy = 'eager' | 'lazy'
 
 export type InjectionStrategy = 'positional' | 'bundle'
@@ -16,25 +20,28 @@ export type Resolver<T = any> = (bundle: Bundle) => T
 
 export type ResolverConstructorOptions<T extends object = any> =
   (TargetConstructorWrapper<T> & {
-    resolution?: ResolutionStrategy
     injection?: InjectionStrategy
+    resolution?: ResolutionStrategy
+    dependencies?: string[]
   })
 
 export type ResolverFactoryOptions<T extends object = any> =
   (TargetFactoryWrapper<T> & { 
-    resolution?: ResolutionStrategy 
     injection?: InjectionStrategy
+    resolution?: ResolutionStrategy 
+    dependencies?: string[]
   })
 
 export type ResolverFunctionOptions<T extends any = any> = 
   (TargetFunctionWrapper<T> & {
-    resolution?: Extract<ResolutionStrategy, 'lazy'>
     injection?: InjectionStrategy
+    resolution?: Extract<ResolutionStrategy, 'eager'>
+    dependencies?: string[]
   })
 
 export type ResolverStaticOptions<T extends any = any> = 
   (TargetStaticWrapper<T> & { 
-    resolution?: Extract<ResolutionStrategy, 'lazy'>
+    resolution?: Extract<ResolutionStrategy, 'eager'>
   })
 
 export type ResolverObjectOptions<T extends object = any> =
@@ -102,18 +109,24 @@ function createProxy<T extends object = any>(resolver: Resolver<T>, prototype?: 
     })
   })
 }
+
+export function createStaticResolver<T extends any>(options: ResolverStaticOptions) {
+  const resolutionStrategy = options.resolution ?? DEFAULT_RESOLUTION_STRATEGY
+
+  if(resolutionStrategy !== 'eager') {
+    throw new Error(`Could not create resolver. Invalid "${resolutionStrategy}" resolution option for static target.`)
+  }
+
+  return (_bundle: Bundle) => {
+    return options.static as TargetStatic<T>
+  }
+}
     
 export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T> {
   const resolution = options.resolution ?? 'eager'
 
   if(Object.prototype.hasOwnProperty.call(options, 'static') && 'static' in options ) {
-    if(resolution !== 'eager') {
-      throw new Error(`Could not create resolver. Invalid "${resolution}" resolution option for static target.`)
-    }
-
-    return (_bundle: Bundle) => {
-      return options.static as TargetStatic<T>
-    }
+    return createStaticResolver(options)
   }
 
   if(Object.prototype.hasOwnProperty.call(options, 'function') && 'function' in options ) {
