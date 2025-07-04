@@ -200,12 +200,9 @@ function createConstructorResolver(options: ResolverConstructorOptions) {
   }
 
   throw new Error(`Could not create factory resolver. Invalid registration options.`)
-
 }
 
 export function createResolver<T = any>(options: ResolverOptions<T>): Resolver<T> {
-  const resolution = options.resolution ?? 'eager'
-
   if(Object.prototype.hasOwnProperty.call(options, 'static') && 'static' in options ) {
     return createStaticResolver(options as ResolverStaticOptions)
   }
